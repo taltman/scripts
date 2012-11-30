@@ -78,8 +78,8 @@
 ## 
 ## stats: Boolean. If 'true', follow separator string with two
 ## integers. The first integer is the sample iteration number, and the
-## second integer is the number of records processed thus
-## far. Example:
+## second integer is the number of records (i.e., lines) processed thus
+## far at the time the sample is updated. Example:
 ## "=== 15 357"
 ## Defaults to 'false'. Provide on command line as follows:
 ## "-v stats=true"
@@ -153,5 +153,3 @@ NR <= k {
     else
 	print sep
 }
-
-
