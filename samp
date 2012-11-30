@@ -116,7 +116,7 @@ function random_int (n) {
 BEGIN { 
     ## Process the command-line arguments:
     if (k == "") {
-	print "samp: sample size 'k' not provided. Exiting."
+	print "samp: sample size 'k' not provided. Exiting." > "/dev/stderr"
 	exit 1
     }
 
@@ -152,4 +152,12 @@ NR <= k {
 	print sep, sample_count, NR
     else
 	print sep
+}
+
+END {
+    if (NR < k) {
+	print "samp: WARNING: Final number of lines processed is less than k=" k " samples." > "/dev/stderr"
+	for (i=1; i <= k; i++)
+	    print sample[i]
+    }
 }
