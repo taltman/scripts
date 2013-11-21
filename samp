@@ -130,11 +130,7 @@ BEGIN {
 
 ## For the first k lines, initialize the sample array:
 
-NR <= k { 
-    sample[NR] = $0
-    sample_count=1
-    next
-}
+NR <= k { sample[NR] = $0; next }
 
 ## If we've initialized the sample array, and we pick an integer
 ## between one and the current record number that is less than or
