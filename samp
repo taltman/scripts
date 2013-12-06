@@ -57,14 +57,19 @@
 ## knowing the size of the stream in advance. 
 ##
 ## In particular, this
-## script implements the offline 'reservoir sampling'
+## script implements the online 'reservoir sampling'
 ## algorithm. Unlike performing 'shuf -n <k> <FILE>', this script does
 ## not buffer the entire file into memory before returning a result,
 ## thus, it is suitable for large files that would exhaust system
 ## memory, or even infinite pipes of data. 
 ##
 ## Because the sample iterations are separated by a distinct string,
-## it is trivial for a downstream program to get the final (or most recent) sample. For example, if the results are being stored in a file called accumulated_samples.txt, and we are looking for 8 samples, the the following pipe should generate the most recent sample:
+## it is trivial for a downstream program to get the final (or most
+## recent) sample. For example, if the results are being stored in a
+## file called accumulated_samples.txt, and we are looking for 8
+## samples, the the following pipe should generate the most recent
+## sample:
+##
 ## tail -n 9 accumulated_samples.txt | head -n 8
 
 ## Options:
