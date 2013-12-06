@@ -14,14 +14,26 @@
 ## TODO:
 ##
 ## * Implement this using runawk. 
+## * Print weights in adjoining columns, or as "::NNN" suffix to entry
+## * Make stats collection optional (to improve memory profile)
+##   In this case, memory consumption will be proportional to size of
+##   first file
+## * Warn when smallest file (in terms of hashing) is not the first
+##   file
+##   ... and make such warnings optional
+## * Make implementation more memory efficient, deleting array members
+##   when necessary
+##   Currently it is buffering memory proportional to the size of the two
+##   input files and the intersection combined! It should ideally scale as a function of
+##   the union of the two files...
+## * Code might be simpler if we use just a single multidimensional array
+
+## * Allow user to specify column ranges for keys
+## * Become feature-complete with GNU comm
 ## * Test this implementation using mawk vs. gawk
 ## * Test this implementation using Perl vs. sort & comm
 ##   (use /usr/bin/time and valgrind)
-## * Print weights in adjoining columns, or as "::NNN" suffix to entry
-## * Make implementation more memory efficient, deleting array members when necessary
-## * Code might be simpler if we use just a single multidimensional array
-## * Make stats collection optional
-
+## * Stat to add: # distinct lines for each file
 
 BEGIN { FS=OFS="\t" }
 
@@ -67,6 +79,10 @@ END {
     print "File 2 unique lines:", intersection_size + file2_setdiff_size > "/dev/stderr"
     print "Common lines:", intersection_weight > "/dev/stderr"
     print "Distinct common lines:", intersection_size > "/dev/stderr"
+    print "Fraction of shared distinct lines over all distinct lines for file 1:", intersection_size / (intersection_size + file1_setdiff_size) > "/dev/stderr"
+    print "Fraction of shared distinct lines over all distinct lines for file 2:", intersection_size / (intersection_size + file2_setdiff_size) > "/dev/stderr"
+    print "Fraction of shared lines over all lines for file 1:", intersection_weight / (intersection_weight + file1_setdiff_weight) > "/dev/stderr"
+    print "Fraction of shared lines over all lines for file 2:", intersection_weight / (intersection_weight + file2_setdiff_weight) > "/dev/stderr"
     print "Unweighted Jaccard Coefficient:", intersection_size / (intersection_size + file1_setdiff_size + file2_setdiff_size ) > "/dev/stderr"
     print "Weighted Jaccard Coefficient:", intersection_weight / (intersection_weight + file1_setdiff_weight + file2_setdiff_weight ) > "/dev/stderr"
 }
