@@ -50,7 +50,7 @@ $0 in file1_lines && ! ($0 in shared_lines) {
     intersection_size++
     intersection_weight += file1_lines[$0]    
     print "", "", $0
-
+    next
 }
 
 ## Increment shared line counts:
