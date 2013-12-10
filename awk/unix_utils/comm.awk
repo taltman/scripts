@@ -1,6 +1,6 @@
 #!/usr/bin/gawk -f
 
-### comp.awk
+### comm.awk
 ##
 ## Copyright held by Tomer Altman
 ##
@@ -9,7 +9,10 @@
 ## This means that this script has linear time and memory complexity,
 ## whereas the equivalent pipeline using sort and comm will have
 ## quadratic or log-linear time complexity (unclear what the memory
-## complexity would be).
+## complexity would be, as I believe sort will fail-over to doing
+## merge sort on the file system if memory is exhausted).
+##
+##
 ##
 ## TODO:
 ##
