@@ -40,10 +40,18 @@
 
 BEGIN { FS=OFS="\t" }
 
-## This line is the only pattern matching the first file entries:
+
+## We are processing the first file, and we have not seen the current
+## line before:
+FNR == NR && ! file1_lines[$0] { file1_unique_lines++ }
+
+## We are processing the first file:
 FNR == NR { file1_size++; file1_lines[$0]++; next }
 
-## For the first occurrence of the shared line in the second file, print the entry keep track of the intersection size & weight:
+## (All subsequent rules apply to the second file):
+
+## For the first occurrence of the shared line in the second file,
+## print the entry and keep track of the intersection size & weight:
 $0 in file1_lines && ! ($0 in shared_lines) { 
 
     shared_lines[$0]
@@ -53,28 +61,36 @@ $0 in file1_lines && ! ($0 in shared_lines) {
     next
 }
 
-## Increment shared line counts:
+## These are lines in the second file that are present in the first
+## file, but this is not the first time that we have encountered the
+## same line. We increment the weight of the line in the intersection:
 $0 in file1_lines { intersection_weight++; next }
 
-## These get executed for non-shared lines in file2:
-! ( $0 in file1_lines ) && ! ( $0 in file2_lines ) { 
-    file2_setdiff_size++ 
-    print "", $0, ""
-}
+## These get executed for the first occurrence of non-shared lines in file2:
+! ( $0 in file1_lines ) && !file2_lines[$0]++ ) { file2_unique_lines++; print "", $0, "" }
+    ##file2_setdiff_size++ 
+    
 
-{ file2_lines[$0]; file2_setdiff_weight++}
+##}
+
+## { file2_lines[$0]; file2_setdiff_weight++}
 
 END {
 
     file2_size = FNR
 
     ## Loop over first file entries:
-    for ( file1_line in file1_lines )
-	if ( ! (file1_line in shared_lines) ) {
-	    print file1_line, "", ""
-	    file1_setdiff_size++
-	    file1_setdiff_weight += file1_lines[file1_line]
-	}
+    # for ( file1_line in file1_lines )
+    # 	if ( ! (file1_line in shared_lines) ) {
+    # 	    print file1_line, "", ""
+    # 	    file1_setdiff_size++
+    # 	    file1_setdiff_weight += file1_lines[file1_line]
+    # 	}
+
+    file1_setdiff_size = file1_unique_lines - intersection_size
+    file2_setdiff_size = file2_unique_lines - intersection_size
+    file1_setdiff_weight = file1_size - intersection_weight
+    file2_setdiff_weight = file2_size - intersection_weight
 
     print "File 1 number of lines:", file1_size > "/dev/stderr"
     print "File 2 number of lines:", file2_size > "/dev/stderr"
