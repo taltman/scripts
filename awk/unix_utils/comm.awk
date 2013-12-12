@@ -38,8 +38,41 @@
 ##   (use /usr/bin/time and valgrind)
 ## * Stat to add: # distinct lines for each file
 
-BEGIN { FS=OFS="\t" }
+## * Some of the stats collection will force us to hash the second
+## file, too, which will lead to even more memory consumption. I think
+## a future version should make this optional via a switch.
+## * also, I don't think we are matching comm's behavior perfectly
+## here, in that I believe comm will return repeated entries.
+## Not just that, but it is buggy in my estimation! Or, the
+## documentation doesn't match the behavior. If you have files:
+#
+# test1.txt:
+#
+# A
+# A
+# B
+# C
+#
+# test2.txt
+# A
+# B
+# C
+# C
+#
+# You get output:
+#
+# taltman@tzfat:~/repos/public_scripts/awk/EDA$ comm ~/tmp/test1.txt ~/tmp/test2.txt 
+# 		A
+# A
+# 		B
+# 		C
+# 	C
+#
+# 	As you can see, line values which are not unique still find their way into columns 1 and 2!
+## I should take this up with the GNU project. :-)
 
+
+BEGIN { FS=OFS="\t" }
 
 ## We are processing the first file, and we have not seen the current
 ## line before:
@@ -50,6 +83,11 @@ FNR == NR { file1_size++; file1_lines[$0]++; next }
 
 ## (All subsequent rules apply to the second file):
 
+## For first occurrence of file2 line that is also shared, don't
+## forget to count it as a unique line:
+
+$0 in file1_lines && !file2_lines[$0]++ { file2_unique_lines++ }
+
 ## For the first occurrence of the shared line in the second file,
 ## print the entry and keep track of the intersection size & weight:
 $0 in file1_lines && ! ($0 in shared_lines) { 
@@ -57,6 +95,7 @@ $0 in file1_lines && ! ($0 in shared_lines) {
     shared_lines[$0]
     intersection_size++
     intersection_weight += file1_lines[$0]    
+    
     print "", "", $0
     next
 }
@@ -67,25 +106,25 @@ $0 in file1_lines && ! ($0 in shared_lines) {
 $0 in file1_lines { intersection_weight++; next }
 
 ## These get executed for the first occurrence of non-shared lines in file2:
-! ( $0 in file1_lines ) && !file2_lines[$0]++ ) { file2_unique_lines++; print "", $0, "" }
+! file2_lines[$0]++ { file2_unique_lines++; print "", $0, "" }
     ##file2_setdiff_size++ 
     
 
 ##}
 
-## { file2_lines[$0]; file2_setdiff_weight++}
+##{ file2_setdiff_weight++}
 
 END {
 
     file2_size = FNR
 
     ## Loop over first file entries:
-    # for ( file1_line in file1_lines )
-    # 	if ( ! (file1_line in shared_lines) ) {
-    # 	    print file1_line, "", ""
-    # 	    file1_setdiff_size++
-    # 	    file1_setdiff_weight += file1_lines[file1_line]
-    # 	}
+    for ( file1_line in file1_lines )
+    	if ( ! (file1_line in shared_lines) ) {
+    	    print file1_line, "", ""
+    	    ##file1_setdiff_size++
+    	    ##file1_setdiff_weight += file1_lines[file1_line]
+    	}
 
     file1_setdiff_size = file1_unique_lines - intersection_size
     file2_setdiff_size = file2_unique_lines - intersection_size
@@ -94,8 +133,8 @@ END {
 
     print "File 1 number of lines:", file1_size > "/dev/stderr"
     print "File 2 number of lines:", file2_size > "/dev/stderr"
-    print "File 1 unique lines:", intersection_size + file1_setdiff_size > "/dev/stderr"
-    print "File 2 unique lines:", intersection_size + file2_setdiff_size > "/dev/stderr"
+    print "File 1 unique lines:", file1_unique_lines > "/dev/stderr"
+    print "File 2 unique lines:", file2_unique_lines > "/dev/stderr"
     print "Common lines:", intersection_weight > "/dev/stderr"
     print "Distinct common lines:", intersection_size > "/dev/stderr"
     print "Number of lines in File 1 but not in File 2:", file1_setdiff_weight > "/dev/stderr"
