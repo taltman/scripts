@@ -45,30 +45,30 @@ presentation_file_directory="${presentation_file##*/}"
 
 ### Grab version of slide_repo
 
-pushd $slide_repo
+# pushd $slide_repo
 
-## We should abort if slide repo is not committed, as then we won't
-## return a stable commit label:
+# ## We should abort if slide repo is not committed, as then we won't
+# ## return a stable commit label:
 
-commit_p=`git status | awk 'BEGIN {update=0} NR == 2 && /Changes to be committed/ { update=1 } END { print update }'`
+# commit_p=`git status | awk 'BEGIN {update=0} NR == 2 && /Changes to be committed/ { update=1 } END { print update }'`
 
-if [[ $commit_p -eq 1 ]]; then
-    echo "beamer-compile: Changes detected in repo $(pwd), aborting."
-    exit 1
-else
-    slide_repo_version=`git log | awk ' /^commit/ && NR==1 { print $2}' `
-fi
+# if [[ $commit_p -eq 1 ]]; then
+#     echo "beamer-compile: Changes detected in repo $(pwd), aborting."
+#     exit 1
+# else
+#     slide_repo_version=`git log | awk ' /^commit/ && NR==1 { print $2}' `
+# fi
 
-popd
+# popd
 
-pushd $presentation_file_directory
+# pushd $presentation_file_directory
 
-pdflatex basename file
-pdflatex basename file
-bibtex basename file
-pdflatex basename file
+# pdflatex basename file
+# pdflatex basename file
+# bibtex basename file
+# pdflatex basename file
 
-popd path
+# popd path
 
 
 
