@@ -1,0 +1,164 @@
+#!/usr/bin/gawk -f
+
+### samp
+### Efficiently sample lines from a large file or infinite pipe. 
+
+
+### Table of Contents:
+## * Copyright & Licensing
+## * Script Documentation
+## * Acknowledgments
+## * Function Definitions
+## * Pattern / Action Section
+
+
+### Copyright & Licensing
+
+## Copyright 2012 Tomer Altman 
+##
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+### Script Documentation
+
+## samp
+
+## Examples:
+## 
+## Example 1: Randomly sample 5 lines from a very large file:
+##
+## samp -v k=5 < VERY_LARGE_FILE
+##
+## Example 2: Randomly sample 500 lines from an infinite stream:
+##
+## mkfifo sampler; 
+## UPPER_PIPE | tee sampler | LOWER_PIPE & 
+## samp -v k=500 < sampler > accumulated_samples.txt
+
+## Synopsis:
+## 
+## samp [OPTION]...
+ 
+## Description: 
+##
+## Sample k random lines from standard input, and print
+## updated samples upon sample set change to standard out, without
+## knowing the size of the stream in advance. 
+##
+## In particular, this
+## script implements the online 'reservoir sampling'
+## algorithm. Unlike performing 'shuf -n <k> <FILE>', this script does
+## not buffer the entire file into memory before returning a result,
+## thus, it is suitable for large files that would exhaust system
+## memory, or even infinite pipes of data. 
+##
+## Because the sample iterations are separated by a distinct string,
+## it is trivial for a downstream program to get the final (or most
+## recent) sample. For example, if the results are being stored in a
+## file called accumulated_samples.txt, and we are looking for 8
+## samples, the the following pipe should generate the most recent
+## sample:
+##
+## tail -n 9 accumulated_samples.txt | head -n 8
+
+## Options:
+##
+## k: Number of lines to sample. Mandatory. Provide on command line as follows:
+## "-v k=5"
+##
+## sep: Separator string used to demarcate iterations of the sample in
+## standard output. Defaults to '==='. Provide on command line as follows:
+## "-v sep='foo'
+## 
+## stats: Boolean. If 'true', follow separator string with two
+## integers. The first integer is the sample iteration number, and the
+## second integer is the number of records (i.e., lines) processed thus
+## far at the time the sample is updated. Example:
+## "=== 15 357"
+## Defaults to 'false'. Provide on command line as follows:
+## "-v stats=true"
+
+
+### Acknowledgments:
+##
+## This script was inspired by a Hacker News post regarding the Dim
+## Sum program. It seemed that the Perl and Ruby implementations of
+## reservoir sampling were much larger than if implemented in AWK, and
+## weren't written with care to avoid needing to slurp the entire file
+## into memory before returning a result.
+##
+## Hacker News post:
+## http://news.ycombinator.com/item?id=4833546
+## 
+## Wikipedia article on Reservoir Sampling:
+## http://en.wikipedia.org/wiki/Reservoir_sampling
+##
+## Thank you to Janis Papanagnou on comp.lang.awk for helping me
+## improve an early version of this script.
+
+
+### Function Definitions:
+
+## Define a function for returning a number between 1 and n:
+## (definition inspired by example from GAWK Manual)
+function random_int (n) { 
+    return 1 + int(rand() * n) 
+}
+
+### Pattern / Action section:
+
+BEGIN { 
+    ## Process the command-line arguments:
+    if (k == "") {
+	print "samp: sample size 'k' not provided. Exiting." > "/dev/stderr"
+	exit 1
+    }
+
+    if (sep == "") sep="==="
+    
+    if (stats == "") stats = "false"
+
+    ## Initialize the PRNG seed:
+    srand()
+}
+
+## For the first k lines, initialize the sample array:
+
+NR <= k { sample[NR] = $0; next }
+
+## If we've initialized the sample array, and we pick an integer
+## between one and the current record number that is less than or
+## equal to k, update the sample array and print it to stdout:
+
+(current_random_int = random_int(NR)) <= k {
+        
+    sample[current_random_int] = $0
+    sample_count++
+    
+    for (i=1; i <= k; i++)
+	print sample[i]
+    
+    if ( stats == "true" )
+	print sep, sample_count, NR
+    else
+	print sep
+}
+
+END {
+    if (NR < k) {
+	print "samp: WARNING: Final number of lines processed is less than k=" k " samples." > "/dev/stderr"
+	for (i=1; i <= k; i++)
+	    print sample[i]
+    }
+}
