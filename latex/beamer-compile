@@ -1,0 +1,74 @@
+#!/bin/bash
+
+### beamer-compile.sh
+##
+## Turn beamer slide index files into presentations, provided a
+## Git-controlled slide repository, and a (optionally Git-controlled)
+## index LaTeX file.
+##
+## Example
+## 
+## beamer-compile path/to/presentation-index-file.tex
+##
+##
+## Discussion:
+##
+## This script is motivated by my frustration of reusing slides among
+## my presentations. I can just copy stuff over, but then a fix/edit in
+## one isn't reflected in other presentations that I recompile. Just
+## like with functions in a project, we want to reduce redundancy.
+## 
+## At first glance it might seem that a simple scheme of
+## one-slide-per-file, and a directory of slide-files would
+## suffice. But there are also the embedded images. Okay, so we put
+## them in an 'img' sub-directory. That's fine. Now, another problem is
+## that different presentations will make use of different versions of
+## slide files and the embedded graphics. So the solution is to make
+## the slide directory into a Git repository. This allows us to
+## associate particular versions of a presentation with a particular
+## tag of the slide/image repo. Thus, if we really need to reconstruct
+## an earlier version of the presentation, no information is lost.
+##
+## The one annoying thing about this approach is that you can't look
+## at the "flow" of the document just by looking over the
+## slides. Hopefully the section structure, file names, and comments
+## will make the index document legible.
+
+
+### Parameters
+
+slide_repo=~/repos/latex-slides
+slide_repo_version="$slide_repo"
+presentation_file_full_path="$1"
+presentation_file_name=`basename $presentation_file_full_path`
+presentation_file_directory="${presentation_file##*/}"
+
+### Grab version of slide_repo
+
+pushd $slide_repo
+
+## We should abort if slide repo is not committed, as then we won't
+## return a stable commit label:
+
+commit_p=`git status | awk 'BEGIN {update=0} NR == 2 && /Changes to be committed/ { update=1 } END { print update }'`
+
+if [[ $commit_p -eq 1 ]]; then
+    echo "beamer-compile: Changes detected in repo $(pwd), aborting."
+    exit 1
+else
+    slide_repo_version=`git log | awk ' /^commit/ && NR==1 { print $2}' `
+fi
+
+popd
+
+pushd $presentation_file_directory
+
+pdflatex basename file
+pdflatex basename file
+bibtex basename file
+pdflatex basename file
+
+popd path
+
+
+
