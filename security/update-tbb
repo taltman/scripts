@@ -37,7 +37,7 @@ local_install_dir="$2"
 
 tarball_name="tor-browser-linux32-${version}_en-US.tar.xz"
 download_dir_url="https://www.torproject.org/dist/torbrowser/${version}"
-
+gpg_exec="gpg2"
 
 
 [ ! "$version" ] && { echo "Forgot version number!"; exit 1; }
@@ -58,7 +58,7 @@ wget $download_dir_url/$tarball_name || { echo "update-tbb: Fetching TOR Browser
 
 wget $download_dir_url/$tarball_name.asc || { echo "update-tbb: Fetching TOR Browser Bundle failed. Tried the following:"; echo "wget $download_dir_url/$tarball_name.asc"; exit 5; }
 
-if gpg2 --verify $tarball_name.asc
+if $gpg_exec --verify $tarball_name.asc
 then   
 
     echo "update-tbb: Signature verified! Proceeding with install"
