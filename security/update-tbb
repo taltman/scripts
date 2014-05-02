@@ -1,0 +1,83 @@
+#!/bin/bash
+
+#### update-tbb
+##   Copyright (c) 2014, Tomer Altman
+##   All rights reserved.
+##   GPL v3
+##
+## 
+### Example:
+##
+## ~/bin/update-tbb 3.6 "~/bin"
+##
+## Description:
+## The TOR Project recommends that people use their Tor Browser Bundle
+## (TBB) over other forms of using TOR. This script tries to 
+## automate the installation of the TBB, since it is only available in
+## tarball form, and not as packages. The easier it is to install, the 
+## more likely one is to update it, which is crucial for security.
+## 
+## This code assumes that you have already gone to the trouble of
+## downloading the appropriate public keys used to sign the TBB
+## tarball to your local keyring. See TOR website for details:
+## https://www.torproject.org/docs/verifying-signatures.html.en
+##
+## Arguments:
+## First argument: The sole argument is the version number, such as "3.5.4".
+## Second argument: The local directory.
+##
+## Side effects:
+## Downloads and installs the TBB.
+##
+## 
+
+### Arguments and parameters:
+version="$1"
+local_install_dir="$2"
+
+tarball_name="tor-browser-linux32-${version}_en-US.tar.xz"
+download_dir_url="https://www.torproject.org/dist/torbrowser/${version}/tor-browser-linux32-${version}_en-US.tar.xz"
+
+
+
+[ ! "$version" ] && { echo "Forgot version number!"; exit 1; }
+
+pushd ~/local/bin > /dev/null || { echo "update-tbb: changing to the local install directory ($locall_install_dir) failed."; exit 2; }
+
+## Remove any previous, aborted downloads:
+rm -f tor-browser-linux32-${version}_en-US.tar.xz*
+
+## Remove the previous backup dir:
+rm -f tor-browser_backup
+
+## Move the current TOR install to the backup location, just in case the install fails.
+## In some cases, better to fall back to an out-of-date TOR than no TOR at all...
+mv tor-browser_en-US tor-browser_backup || { echo "update-tbb: Moving current install directory to backup location failed."; exit 3; }
+
+wget $download_dir_url/$tarball_name || { echo "update-tbb: Fetching TOR Browser Bundle failed. Tried the following:"; echo "wget $download_dir_url/$tarball_name"; exit 4; }
+
+wget $download_dir_url/$tarball_name.asc || { echo "update-tbb: Fetching TOR Browser Bundle failed. Tried the following:"; echo "wget $download_dir_url/$tarball_name.asc"; exit 5; }
+
+if gpg2 --verify $tarball_name.asc
+then   
+
+    echo "update-tbb: Signature verified! Proceeding with install"
+    ## Not sure if I should be clobbering the backup at this point. Should probably test it somehow.
+    if tar xvJf $tarball_name
+    then 
+	echo "update-tbb: Install successful!"
+	rm -f tor-browser_backup
+    else
+	echo "update-tbb: untar'ing failed!"
+	exit 6
+
+else
+
+    echo "update-tbb: Signature verification failed!"
+    echo "Restoring backup of TOR install directory."
+    mv tor-browser_backup tor-browser_en-US
+    exit 7
+
+fi
+
+popd > /dev/null
