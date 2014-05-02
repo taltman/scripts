@@ -76,13 +76,21 @@ file_metadata_name="shorten-filenames"
 ## The hash/summary function to use. On my MacOSX, shasum was available:
 hash_function="shasum"
 
+## For 'find' to work, we need to have extended POSIX regular expressions.
+## Different UNIXes do this differently:
+if [ "`uname`" == "Linux" ]; then
+    find_regex_option="-regextype posix-extended "
+else ## This is for BSD-like, such as Darwin OS:
+    find_regex_option="-E "
+fi
+
 ## Dispatch based on whether we are "encoding" or "decoding":
 
 if [ "$direction" == "encode" ]; then
 
 ## Iterate over a list of files with names longer than cutoff:
 
-    for full_path in `find -E $directory -regex ".*/.{$cutoff,}$" -print`
+    for full_path in `find $find_regex_option $directory -regex ".*/.{$cutoff,}$" -print`
     do
 	
 	curr_dir=`dirname $full_path`
