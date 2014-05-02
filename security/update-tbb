@@ -70,7 +70,8 @@ then
     else
 	echo "update-tbb: untar'ing failed!"
 	exit 6
-
+    fi
+    
 else
 
     echo "update-tbb: Signature verification failed!"
