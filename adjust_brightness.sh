@@ -1,6 +1,9 @@
 #!/bin/bash
 
-
+#### adjust_brightness.sh
+##
+## Adjust the brightness of your Linux laptop from the command line.
+##
 ## Original, horribly written script taken from:
 ## http://wiki.laptop.org/go/Xfce_keybindings#Adjust_screen_brightness_buttons
 ## This is floating around the interwebs, should send this improved version out 
