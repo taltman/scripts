@@ -36,23 +36,23 @@ version="$1"
 local_install_dir="$2"
 
 tarball_name="tor-browser-linux32-${version}_en-US.tar.xz"
-download_dir_url="https://www.torproject.org/dist/torbrowser/${version}/tor-browser-linux32-${version}_en-US.tar.xz"
+download_dir_url="https://www.torproject.org/dist/torbrowser/${version}"
 
 
 
 [ ! "$version" ] && { echo "Forgot version number!"; exit 1; }
 
-pushd ~/local/bin > /dev/null || { echo "update-tbb: changing to the local install directory ($locall_install_dir) failed."; exit 2; }
+pushd $local_install_dir > /dev/null || { echo "update-tbb: changing to the local install directory ($local_install_dir) failed."; exit 2; }
 
 ## Remove any previous, aborted downloads:
 rm -f tor-browser-linux32-${version}_en-US.tar.xz*
 
 ## Remove the previous backup dir:
-rm -f tor-browser_backup
+rm -rf tor-browser_backup
 
 ## Move the current TOR install to the backup location, just in case the install fails.
 ## In some cases, better to fall back to an out-of-date TOR than no TOR at all...
-mv tor-browser_en-US tor-browser_backup || { echo "update-tbb: Moving current install directory to backup location failed."; exit 3; }
+[ -e tor-browser_en-US ] && { mv tor-browser_en-US tor-browser_backup || { echo "update-tbb: Moving current install directory to backup location failed."; exit 3; }; }
 
 wget $download_dir_url/$tarball_name || { echo "update-tbb: Fetching TOR Browser Bundle failed. Tried the following:"; echo "wget $download_dir_url/$tarball_name"; exit 4; }
 
