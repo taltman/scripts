@@ -10,23 +10,24 @@
 ## take a FASTQ file and remove entries that have matching read IDs.
 ## This is useful for filtering out reads, such as human reads from
 ## microbiome samples.
+##
+## -v filter_dir=in means the read IDs are for reads to keep
+## -v filter_dir=out means the read IDs are for reads to remove
 
-## Hash up Human read identifiers:
-ARGIND == 1 { 
-    human_reads[$0]++
-    next
-}
+
+BEGIN { if( filter_dir == "") filter_dir = "in" }
+
+## Hash up read identifiers:
+NR == FNR { read_ids[$0]++ ; next }
+
 
 ## Print out the SAM mapped read identifiers:
 ## Only for the second file, which is the SAM input,
-## and only if it is not a header line, and only
-## if we don't already have that read:
+## and only if the read ID is in the read_ids hash:
 
-## Set entry to true if not in human read ID hash:
-(FNR%4) == 1 && ! (substr($1,2) in human_reads)  { entry=1 }
+
+## Set entry to true if not in read ID hash:
+(FNR%4) == 1 { matched_entry_p = substr($1,2) in read_ids }
 
 ## If true, print the line:
-entry == 1 { print }
-
-## Before we evaluate the next FASTQ entry, reset entry to zero:
-(FNR%4) == 0 { entry=0 }
+(filter_dir == "in" && matched_entry_p) || (filter_dir == "out" && !matched_entry_p)
