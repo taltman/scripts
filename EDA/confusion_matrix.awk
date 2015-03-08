@@ -79,8 +79,11 @@ END {
     print ""
     print "Accuracy:", num_correct"/"total, num_correct*100/total"%"
     print "Error Rate:", num_incorrect "/" total, num_incorrect*100/total"%"
-    print "Sensitivity:", true_positives "/" num_true, true_positives*100/num_true"%"
-    print "Specificity:", true_positives "/" num_positive, true_positives*100/num_positive"%"
+    print "Sensitivity (Recall):", true_positives "/" num_true, true_positives*100/num_true"%"
+    print "Specificity (TNR):", true_negatives "/" num_negative, true_negatives*100/num_negative"%"
+    print "Precision:", true_positives "/" num_positive , true_positives*100 / num_positive"%"
+    print "False Positive Rate:", false_positives "/" num_negative, false_positives*100/num_negative"%"
+    print "False Negative Rate:", false_negatives "/" num_true, false_negatives*100/num_true"%"
 
     ## Need to add precision, recall, F-measure, sensitivity, and specificity
 }
@@ -106,34 +109,4 @@ END {
 # Set2not1
 # A:F
 # C:F
-
-
-
-# #!/bin/bash
-
-# ## For example, SwissProt has 540261 protein sequences, and the blastx results had 711147 distinct complete read results, so the total possible
-# ## pairs would be: 711147 * 540261 = 384204989367
-# COMPARE_SPACE="$1"
-# TRUTH_FILE="$2"
-# PREDICTION_FILE="$3"
-
-# true_positives=`comm -12 $TRUTH_FILE $PREDICTION_FILE | wc -l`
-# false_positives=`comm -13 $TRUTH_FILE $PREDICTION_FILE | wc -l`
-# false_negatives=`comm -23 $TRUTH_FILE $PREDICTION_FILE | wc -l`
-# true_negatives=`awk "BEGIN{ print $COMPARE_SPACE - $true_positives - $false_positives - $false_negatives }"`
-
-# accuracy=`awk "BEGIN{ print ( $true_positives + $true_negatives )/ $COMPARE_SPACE }"`
-# error_rate=`awk "BEGIN{ print 1 - $accuracy }"`
-# sensitivity=`awk "BEGIN{ print $true_positives / ($true_positives + $false_negatives) }"`
-# specificity=`awk "BEGIN{ print $true_negatives / ($true_negatives + $false_positives) }"`
-
-# echo "True positives: $true_positives"
-# echo "False positives: $false_positives"
-# echo "False negatives: $false_negatives"
-# echo "True negatives: $true_negatives"
-# echo "---"
-# echo "Accuracy: $accuracy"
-# echo "Error rate: $error_rate"
-# echo "Sensitivity: $sensitivity"
-# echo "Specificity: $specificity"
 
