@@ -13,12 +13,17 @@
 ##
 ## -v filter_dir=in means the read IDs are for reads to keep
 ## -v filter_dir=out means the read IDs are for reads to remove
+##
+## This script has a bug if the read id file is zero bytes. Nothing gets
+## printed out, even for filter_dir=out.
 
 
 BEGIN { if( filter_dir == "") filter_dir = "in" }
 
 ## Hash up read identifiers:
-NR == FNR { read_ids[$0]++ ; next }
+
+## Realized that NR==FNR idiom is buggy when passed a zero-byte file:
+ARGIND == 1 { read_ids[$0]++ ; next }
 
 
 ## Print out the SAM mapped read identifiers:
