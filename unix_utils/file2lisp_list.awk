@@ -9,4 +9,4 @@ BEGIN { print "'(" }
 /[a-z]+/ { print "|" $0 "|"; next }
 { print }
 
-END { print ")"
+END { print ")" }
