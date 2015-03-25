@@ -4,18 +4,27 @@ import fileinput
 import sys
 import csv
 import gzip
+import argparse
 
-sys.path.append('/afs/ir/users/t/a/taltman1/farmshare/third-party/bin/MetaPathways/v2.5.2/MetaPathways_Python.2.5.1/libs/python_modules/taxonomy')
+parser = argparse.ArgumentParser(description="Resolve MetaPathways 'indeterminate' taxonomy ORFs")
+
+parser.add_argument('metapathways_path')
+parser.add_argument('project_path')
+
+args = parser.parse_args()
+
+sys.path.append(args.metapathways_path + '/MetaPathways_Python.2.5.1/libs/python_modules/taxonomy')
 
 import LCAComputation
 
-taxonomy_file_base_dir = '/afs/ir/users/t/a/taltman1/farmshare/third-party/bin/MetaPathways/v2.5/MetaPathways_DBs/ncbi_tree'
+taxonomy_file_base_dir = args.metapathways_path + '/MetaPathways_DBs/ncbi_tree'
 
-refseq_catalog_file = '/afs/ir/users/t/a/taltman1/farmshare/bio_dbs/RefSeq/69/RefSeq-release69.catalog.gz'
+## The current refseq catalog should be symlinked from the taxonomic directory:
+refseq_catalog_file = args.metapathways_path + '/MetaPathways_DBs/taxonomic/RefSeq.catalog.gz'
 
-annotation_file = '/afs/ir/users/t/a/taltman1/farmshare/single-cell-assembly-files/BoM_results/oral_ch1_test/hybrid_assembly_dir/metapathways_v2-5/scaffolds/results/annotation_table/functional_and_taxonomic_table.txt'
+annotation_file = args.project_path + '/results/annotation_table/functional_and_taxonomic_table.txt'
 
-blast_file = '/afs/ir/users/t/a/taltman1/farmshare/single-cell-assembly-files/BoM_results/oral_ch1_test/hybrid_assembly_dir/metapathways_v2-5/scaffolds/blast_results/scaffolds.refseq-protein-v69.faa.BLASTout.parsed.txt'
+blast_file = args.project_path + '/blast_results/scaffolds.refseq-protein-v69.faa.BLASTout.parsed.txt'
 
 tree_files = [ taxonomy_file_base_dir + "/ncbi_taxonomy_tree.txt"]
 
@@ -72,8 +81,8 @@ for line in catalog_file:
 
     if columns[3] in gi_nums:
         gi_nums[columns[3]] = columns[0]
-        print gi_num2locus[columns[3]] + " " + columns[3] + " " + columns[1] \
-            + " " + columns[0]
+        ##print gi_num2locus[columns[3]] + " " + columns[3] + " " + columns[1] \
+          ##  + " " + columns[0]
 
 catalog_file.close()
 
