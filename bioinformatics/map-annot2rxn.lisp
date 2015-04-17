@@ -1,6 +1,20 @@
 (in-package :ec)
 ;; The above puts the file in the correct Common Lisp package
 
+
+;; Copy & paste this code into your PTools Lisp API session, and then
+;; execut the following to generate a functional description mapping:
+
+; (print-func-annot-metacyc-rxn-table (get-function-matches))
+;; Of course, remove that leading semi-colon to run!
+
+;; You'd do the same thing for the GO-Terms and EC numbers, just swapping
+;; out the inner function.
+
+;; Dont' forget find-probable-transport-names!
+
+
+
 ;; The following switches the current organism to MetaCyc,
 ;; and builds the enzyme matching table.
 (progn (so 'meta)
