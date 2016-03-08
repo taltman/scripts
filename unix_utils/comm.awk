@@ -39,37 +39,15 @@
 ## * Stat to add: # distinct lines for each file
 
 ## * Some of the stats collection will force us to hash the second
-## file, too, which will lead to even more memory consumption. I think
-## a future version should make this optional via a switch.
-## * also, I don't think we are matching comm's behavior perfectly
-## here, in that I believe comm will return repeated entries.
-## Not just that, but it is buggy in my estimation! Or, the
-## documentation doesn't match the behavior. If you have files:
-#
-# test1.txt:
-#
-# A
-# A
-# B
-# C
-#
-# test2.txt
-# A
-# B
-# C
-# C
-#
-# You get output:
-#
-# taltman@tzfat:~/repos/public_scripts/awk/EDA$ comm ~/tmp/test1.txt ~/tmp/test2.txt 
-# 		A
-# A
-# 		B
-# 		C
-# 	C
-#
-# 	As you can see, line values which are not unique still find their way into columns 1 and 2!
-## I should take this up with the GNU project. :-)
+##   file, too, which will lead to even more memory consumption. I think
+##   a future version should make this optional via a switch.
+##
+## * Note that the behavior of this script in the face of bags instead of
+##   sets, is not modeled after comm's behavior (i.e., bag
+##   intersections). Instead, the set-based intersection is determined,
+##   and any bag members that are in the set intersection go into the bag
+##   intersection. Should make a toggle to change the behavior. And need
+##   clear documentation of both behaviors.
 
 
 BEGIN { FS=OFS="\t" }

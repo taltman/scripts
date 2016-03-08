@@ -82,7 +82,7 @@ END {
     print "Sensitivity (Recall):", true_positives "/" num_true, true_positives*100/num_true"%"
     print "Specificity (TNR):", true_negatives "/" num_negative, true_negatives*100/num_negative"%"
     print "Precision:", true_positives "/" num_positive , true_positives*100 / num_positive"%"
-    print "False Positive Rate:", false_positives "/" num_negative, false_positives*100/num_negative"%"
+    print "False Positive Rate:", false_positives "/" num_false, false_positives*100/num_false"%"
     print "False Negative Rate:", false_negatives "/" num_true, false_negatives*100/num_true"%"
 
     ## Need to add precision, recall, F-measure, sensitivity, and specificity
