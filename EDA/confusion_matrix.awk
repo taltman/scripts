@@ -2,8 +2,9 @@
 
 ### confusion_matrix.awk
 ##
-## Use the output of unix util comm.awk to construct a confusion matrix, along with associated measurements
-## (accuracy, FPR, etc.)
+## Use the output of unix util comm.awk to construct a confusion
+## matrix, along with associated measurements
+## (accuracy, FPR, etc.).
 ##
 ## The heavy lifting is done by comm.awk. Here we parse the stderr
 ## output of comm.awk, cast the values in the terminology of
@@ -13,7 +14,7 @@
 ## time comm.awk predicted.txt gold_standard.txt 2> /dev/null | confusion_matrix.awk
 ##
 ## Here we assume that both the predicted.txt and gold_standard.txt
-## are tab-delimited files with two columns each. The first column
+## are character-delimited files with two columns each. The first column
 ## is an object identifier, and the second column is a class.
 ##
 ## In the current iteration of this script, We only support a
@@ -85,7 +86,7 @@ END {
     print "False Positive Rate:", false_positives "/" num_negative, false_positives*100/num_negative"%"
     print "False Negative Rate:", false_negatives "/" num_true, false_negatives*100/num_true"%"
 
-    ## Need to add precision, recall, F-measure, sensitivity, and specificity
+    ## Need to add F-measure and Matthews Correlation Coefficient
 }
 
 # Set 1
