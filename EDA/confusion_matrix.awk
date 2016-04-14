@@ -41,10 +41,22 @@ BEGIN {
 
     class_sep = (class_sep_opt) ? class_sep_opt : ":"
 
+    ## Do we assume that both files contain all IDs with labels?
+    ## Sparse mode assumes that we just have the positive labels.
+    if ( sparse_mode == "" )
+	sparse_mode = "no"
+
+    false_negatives = 0
+    true_negatives  = 0
+    true_positives  = 0
+    false_positives = 0
+    
 }
 
 $1 ~ (class_sep "F") { false_negatives++ }
 $1 ~ (class_sep "T") { false_positives++ }
+sparse_mode == "yes" && $2 ~ (class_sep "T") { false_negatives++ }
+sparse_mode == "yes" && $2 ~ (class_sep "F") { true_negatives++ }
 $3 ~ (class_sep "F") { true_negatives++ }
 $3 ~ (class_sep "T") { true_positives++ }
 
@@ -60,9 +72,9 @@ END {
 
     print "* Basic Statistics:"
     print ""
-    print "Total objects:", total
-    print "True positives:", true_positives
-    print "True negatives:", true_negatives
+    print "Total objects:","", total
+    print "True positives:","", true_positives
+    print "True negatives:","", true_negatives
     print "False positives:", false_positives
     print "False negatives:", false_negatives
     print ""
@@ -71,21 +83,26 @@ END {
 
     printf "\t\tPredicted\n"
     printf "\t\tPositive\tNegative\tTotal\n"
-    printf "Truth\tTrue\t%d\t%d\t%d\n", true_positives, false_negatives, num_true
-    printf "\tFalse\t%d\t%d\t%d\n", false_positives, true_negatives, num_false
-    printf "\tTotal\t%d\t%d\t%d\n", num_positive, num_negative, total
+    printf "Truth\tTrue\t%d\t\t%d\t\t%d\n", true_positives, false_negatives, num_true
+    printf "\tFalse\t%d\t\t%d\t\t%d\n", false_positives, true_negatives, num_false
+    printf "\tTotal\t%d\t\t%d\t\t%d\n", num_positive, num_negative, total
     
     print ""
     print "* Prediction Metrics:"
     print ""
-    print "Accuracy:", num_correct"/"total, num_correct*100/total"%"
-    print "Error Rate:", num_incorrect "/" total, num_incorrect*100/total"%"
-    print "Sensitivity (Recall):", true_positives "/" num_true, true_positives*100/num_true"%"
-    print "Specificity (TNR):", true_negatives "/" num_negative, true_negatives*100/num_negative"%"
-    print "Precision:", true_positives "/" num_positive , true_positives*100 / num_positive"%"
-    print "False Positive Rate:", false_positives "/" num_negative, false_positives*100/num_negative"%"
-    print "False Negative Rate:", false_negatives "/" num_true, false_negatives*100/num_true"%"
+    print "Accuracy:","", num_correct"/"total,"", num_correct*100/total"%"
+    print "Error Rate:","", num_incorrect "/" total,"", num_incorrect*100/total"%"
+    print "Sensitivity (Recall):", true_positives "/" num_true,"", true_positives*100/num_true"%"
+    if ( num_negative > 0 ) {
+	print "Specificity (TNR):", true_negatives "/" num_negative,"", true_negatives*100/num_negative"%"
+	print "False Positive Rate:", false_positives "/" num_negative,"", false_positives*100/num_negative"%"
+    }
 
+    if ( num_positive ) {
+	print "Precision:","", true_positives "/" num_positive ,"", true_positives*100 / num_positive"%"   
+	print "False Negative Rate:", false_negatives "/" num_true,"", false_negatives*100/num_true"%"
+    }
+    
     ## Need to add F-measure and Matthews Correlation Coefficient
 }
 
