@@ -105,15 +105,19 @@ END {
 	print "Accuracy:","", num_correct"/"total,"", num_correct*100/total"%"
 	print "Error Rate:","", num_incorrect "/" total,"", num_incorrect*100/total"%"
 	print "Sensitivity (Recall):", true_positives "/" num_true,"", true_positives*100/num_true"%"
-	if ( num_negative > 0 ) {
+	if ( num_negative > 0 )
 	    print "Specificity (TNR):", true_negatives "/" num_negative,"", true_negatives*100/num_negative"%"
+
+	if ( num_false > 0 )
 	    print "False Positive Rate:", false_positives "/" num_false,"", false_positives*100/num_false"%"
-	}
 	
-	if ( num_positive > 0 ) {
+	
+	if ( num_positive > 0 )
 	    print "Precision:","", true_positives "/" num_positive ,"", true_positives*100 / num_positive"%"   
+
+	if ( num_true > 0 )
 	    print "False Negative Rate:", false_negatives "/" num_true,"", false_negatives*100/num_true"%"
-	}
+
 
     }
     
