@@ -30,6 +30,10 @@
 ## * class_sep_opt (optional)
 ##   Character that separates identifier from classification.
 ##   Defaults to ":".
+## * verbosity (optional)
+##   Controls what to print. Options are: "basic", "table", "metrics",
+##   and "all".
+
 
 ## TODO:
 ##
@@ -46,6 +50,9 @@ BEGIN {
     if ( sparse_mode == "" )
 	sparse_mode = "no"
 
+    if ( verbosity == "" )
+	verbosity == "all"
+    
     false_negatives = 0
     true_negatives  = 0
     true_positives  = 0
@@ -70,37 +77,44 @@ END {
     num_negative = true_negatives + false_negatives
     total = num_true + num_false
 
-    print "* Basic Statistics:"
-    print ""
-    print "Total objects:","", total
-    print "True positives:","", true_positives
-    print "True negatives:","", true_negatives
-    print "False positives:", false_positives
-    print "False negatives:", false_negatives
-    print ""
-
-    print "* Table view:"
-
-    printf "\t\tPredicted\n"
-    printf "\t\tPositive\tNegative\tTotal\n"
-    printf "Truth\tTrue\t%d\t\t%d\t\t%d\n", true_positives, false_negatives, num_true
-    printf "\tFalse\t%d\t\t%d\t\t%d\n", false_positives, true_negatives, num_false
-    printf "\tTotal\t%d\t\t%d\t\t%d\n", num_positive, num_negative, total
-    
-    print ""
-    print "* Prediction Metrics:"
-    print ""
-    print "Accuracy:","", num_correct"/"total,"", num_correct*100/total"%"
-    print "Error Rate:","", num_incorrect "/" total,"", num_incorrect*100/total"%"
-    print "Sensitivity (Recall):", true_positives "/" num_true,"", true_positives*100/num_true"%"
-    if ( num_negative > 0 ) {
-	print "Specificity (TNR):", true_negatives "/" num_negative,"", true_negatives*100/num_negative"%"
-	print "False Positive Rate:", false_positives "/" num_negative,"", false_positives*100/num_negative"%"
+    if ( verbosity == "all" || verbosity == "basic" ) {
+	print "* Basic Statistics:"
+	print ""
+	print "Total objects:","", total
+	print "True positives:","", true_positives
+	print "True negatives:","", true_negatives
+	print "False positives:", false_positives
+	print "False negatives:", false_negatives
+	print ""
     }
 
-    if ( num_positive ) {
-	print "Precision:","", true_positives "/" num_positive ,"", true_positives*100 / num_positive"%"   
-	print "False Negative Rate:", false_negatives "/" num_true,"", false_negatives*100/num_true"%"
+    if ( verbosity == "all" || verbosity == "table" ) {
+	print "* Table view:"
+	
+	printf "\t\tPredicted\n"
+	printf "\t\tPositive\tNegative\tTotal\n"
+	printf "Truth\tTrue\t%d\t\t%d\t\t%d\n", true_positives, false_negatives, num_true
+	printf "\tFalse\t%d\t\t%d\t\t%d\n", false_positives, true_negatives, num_false
+	printf "\tTotal\t%d\t\t%d\t\t%d\n", num_positive, num_negative, total
+    }
+
+    if ( verbosity == "all" || verbosity == "metrics" ) {
+	print ""
+	print "* Prediction Metrics:"
+	print ""
+	print "Accuracy:","", num_correct"/"total,"", num_correct*100/total"%"
+	print "Error Rate:","", num_incorrect "/" total,"", num_incorrect*100/total"%"
+	print "Sensitivity (Recall):", true_positives "/" num_true,"", true_positives*100/num_true"%"
+	if ( num_negative > 0 ) {
+	    print "Specificity (TNR):", true_negatives "/" num_negative,"", true_negatives*100/num_negative"%"
+	    print "False Positive Rate:", false_positives "/" num_false,"", false_positives*100/num_false"%"
+	}
+	
+	if ( num_positive > 0 ) {
+	    print "Precision:","", true_positives "/" num_positive ,"", true_positives*100 / num_positive"%"   
+	    print "False Negative Rate:", false_negatives "/" num_true,"", false_negatives*100/num_true"%"
+	}
+
     }
     
     ## Need to add F-measure and Matthews Correlation Coefficient
