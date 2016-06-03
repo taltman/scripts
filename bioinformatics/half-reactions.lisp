@@ -14,6 +14,23 @@
 ;; * Balancing of half-reaction sums
 ;;   (this is for simulation)
 
+;; Generate this file like so:
+;; awk -F '\t' 'BEGIN{print "("}$6!="NO"{gsub(/,/," ",$3);gsub(/,/," ",$4);print "(" $1 " (" $3 ") (" $4 ") " $5 ")" }END{print ")"}' guild_KB_v0.3.csv > guild_KB_v0.3.lisp 
+
+(defun load-trophism-data ()
+  (let ((counter 0))
+    (loop for entry in (with-open-file (in
+					"/Users/taltman/bmi/projects/de-novo-guilds/data/guild_KB_v0.3.lisp")
+			 (read in))
+       do (incf counter)
+       when (> counter 1)
+	 collect entry)))
+
+
+(defun load-guild-list ()
+  (with-open-file (in
+		   "/Users/taltman/bmi/projects/de-novo-guilds/data/pwy_guild_features.lisp")
+    (read in)))
 
 (setf fully-oxidized-cpds
       '(CARBON-DIOXIDE))
@@ -419,8 +436,56 @@
 		     :test #'equalp)))
 
 		    
-(defun create-half-reaction (cpd)
+;;(defun create-half-reaction (cpd)
 
+
+(defun find-trophism-data-by-pathway (query-pwy trophism-data &key acceptor?)
+  (loop for (tclass oxidized-cpds reduced-cpds pwy) in trophism-data
+     when (or (and acceptor?
+		   (eq tclass 'electron_acceptor)
+		   (fequal query-pwy pwy))
+	      (and (not acceptor?)
+		   (not (eq tclass 'electron_acceptor))
+		   (fequal query-pwy pwy)))
+     return (list tclass oxidized-cpds reduced-cpds pwy)))
+	      
+
+(defun generate-half-reaction-by-pathway (query-pwy 
+					  defined-half-reactions 
+					  trophism-data 
+					  &key acceptor?)
+
+  (destructuring-bind (tclass oxidized-cpds reduced-cpds pwy)
+      (find-trophism-data-by-pathway query-pwy trophism-data :acceptor? acceptor?)
+
+    (let ((defined-match (find-matching-half-reactions oxidized-cpds
+						       reduced-cpds
+						       pwy
+						       defined-half-reactions)))
+
+      (cond (defined-match
+	     (first defined-match))
+	    ((and (eq tclass 'Electron_Acceptor)
+		  (> (length reduced-cpds) 1))
+	     (create-mixed-fermentation-half-reaction pwy
+						      reduced-cpds))
+	    
+	    ((and reduced-cpds
+		  (= (length reduced-cpds) 1)
+		  (not (fmember (first reduced-cpds) '(CELLULOSE |Starch|)))
+		  (chon-molecule? (first reduced-cpds))
+		  (not (fmember (first reduced-cpds) fully-oxidized-cpds)))
+	     (generate-simple-chon-half-reaction (first reduced-cpds)))
+	    
+	    ((and oxidized-cpds
+		  (= (length oxidized-cpds) 1)
+		  (chon-molecule? (first oxidized-cpds))
+		  (not (fmember (first oxidized-cpds) fully-oxidized-cpds)))
+	     (generate-simple-chon-half-reaction (first oxidized-cpds)))))))
+    
+
+
+(setf fully-oxidized-cpds '(CARBON-DIOXIDE HCO3))
 
 
 (defun generate-half-reactions (guild-data defined-half-reactions)
@@ -431,12 +496,12 @@
 						   defined-half-reactions)
      ;; Has a defined half reaction:
      when matches
-     collect (list pwy (first matches))
+     collect (list tclass pwy (first matches))
 
      ;; Fermentation products:
      else when (and (eq tclass 'Electron_Acceptor)
 		    (> (length reduced-cpds) 1))
-     collect (list pwy (create-mixed-fermentation-half-reaction pwy
+     collect (list tclass pwy (create-mixed-fermentation-half-reaction pwy
 								reduced-cpds))
 
      ;; Try to make a half reaction from the reduced cpd:
@@ -445,14 +510,14 @@
 		    (not (fmember (first reduced-cpds) '(CELLULOSE |Starch|)))
 		    (chon-molecule? (first reduced-cpds))
 		    (not (fmember (first oxidized-cpds) fully-oxidized-cpds)))
-     collect (list pwy (generate-simple-chon-half-reaction (first reduced-cpds)))
+     collect (list tclass pwy (generate-simple-chon-half-reaction (first reduced-cpds)))
 
      ;; Try to make a half reaction from the oxidized cpd:
      else when (and oxidized-cpds 
 		    (= (length oxidized-cpds) 1)
 		    (chon-molecule? (first oxidized-cpds))
 		    (not (fmember (first oxidized-cpds) fully-oxidized-cpds)))
-     collect (list pwy (generate-simple-chon-half-reaction (first oxidized-cpds)))))
+     collect (list tclass pwy (generate-simple-chon-half-reaction (first oxidized-cpds)))))
 
 
 ;;;; ::::::::: Thermodynamics :::::::::::::
@@ -470,11 +535,23 @@
 ;; This needs to be more flexible to pick electron acceptor half reactions, too.
 ;; Todo: make transfer efficiency a parameter
 ;; This function should take half-reactions as arguments, so we're not searching for half-reactions twice. 
-;; 
-(defun compute-yield-parameters (electron-donor carbon-source nitrogen-source electron-acceptor autotroph?)
-  (let* ((delta-Gr-pyruvate (compute-delta-g-of-half-reaction (generate-simple-chon-half-reaction 'pyruvate)))
-	 (delta-Gr-carbon-source (compute-delta-g-of-half-reaction (generate-simple-chon-half-reaction carbon-source)))
-	 (delta-Gr-autotrophs (compute-delta-g-of-half-reaction (generate-simple-chon-half-reaction 'oxygen-molecule)))
+
+(defun compute-yield-parameters (electron-donor-half-rxn
+				 carbon-source-half-rxn
+				 nitrogen-source
+				 electron-acceptor-half-rxn
+				 autotroph?)
+
+  (let* ((delta-Gr-pyruvate 
+	  (compute-delta-g-of-half-reaction 
+	   (generate-simple-chon-half-reaction 'pyruvate)))
+
+	 (delta-Gr-carbon-source 
+	  (compute-delta-g-of-half-reaction carbon-source-half-rxn))
+
+	 (delta-Gr-autotrophs 
+	  (compute-delta-g-of-half-reaction 
+	   (generate-simple-chon-half-reaction 'oxygen-molecule)))
 
 	 ;; This is currently assuming ammonium as carbon source:
 	 (delta-Gp (if autotroph?
@@ -507,8 +584,12 @@
 			     transfer-efficiency)
 			  (/ delta-Gpc transfer-efficiency))))
 	 
-	 (delta-Gr-electron-donor (compute-delta-g-of-half-reaction (generate-simple-chon-half-reaction electron-donor)))
-	 (delta-Gr-electron-acceptor (compute-delta-g-of-half-reaction (generate-simple-chon-half-reaction electron-acceptor)))
+	 (delta-Gr-electron-donor 
+	  (compute-delta-g-of-half-reaction electron-donor-half-rxn))
+
+	 (delta-Gr-electron-acceptor 
+	  (compute-delta-g-of-half-reaction electron-acceptor-half-rxn))
+
 	 (delta-Gr-cell-energy (- delta-Gr-electron-acceptor
 				  delta-Gr-electron-donor))
 	 (A (- (/ delta-Gs 
@@ -536,31 +617,66 @@
 
 
 
+;; Todo: Implement weighting by electron equivalents
 
-(defun sum-half-reactions (half-reactions-list)
+;; weighted? controls whether we try to weight the contribution of each half-rxn to the sum
+;; donors? determines whether we take the half-rxns to represent electron donors.
+
+(defun delta-G-weight (delta-G &key donors?)
+  (cond ((and donors? (> delta-G 0))
+	 delta-G)
+	((and (not donors?) (< delta-G 0))
+	 (- delta-G))
+	((and donors? (< delta-G))
+	 (- (/ 1 delta-G)))
+	((and (not donors?) (> delta-G 0))
+	 (/ 1 delta-G))))
+  
+
+(defun sum-half-reactions (half-reactions-list &key weighted? donors?)
+
   ;; oxidized is meant to mean "left side", and 
   ;; reduced to mean "right side", since we might be using
   ;; this function to generate balanced microbial growth equations.
-  (let ((oxidized-hash (make-hash-table))
+  (let ((delta-G-sum 0)
+	(oxidized-hash (make-hash-table))
 	(reduced-hash  (make-hash-table)))
 
+    ;; The weighting scheme is
+    ;; If we have an electron donor half reaction with negative delta G, or
+    ;; If we have an electron acceptor half reaction with positive delta G,
+    ;; we scale them by the inverse. Otherwise, their delta G is used as the weight.
+
+    (when weighted?
+      (loop for half-rxn in half-reactions-list
+	   for delta-G = (compute-delta-g-of-half-reaction half-rxn)
+	 do (setf delta-G-sum 
+		  (+ delta-G-sum
+		     ;; This cond ensures that the weights are all positive:
+		     (delta-G-weight delta-G :donors? donors?)))))
+			 			 
     (loop for half-rxn in half-reactions-list
+       for delta-G = (compute-delta-g-of-half-reaction half-rxn)
+       for delta-G-frac = (if weighted?
+			      (/ (delta-G-weight delta-G :donors? donors?)
+				 delta-G-sum)
+			      1)
        do (loop for (oxidized-coef oxidized-cpd) in (first half-rxn)
 	     when (gethash oxidized-cpd oxidized-hash)
 	     do (setf (gethash oxidized-cpd oxidized-hash)
 		      (+ (gethash oxidized-cpd oxidized-hash)
-			oxidized-coef))
+			 (* delta-G-frac oxidized-coef)))
 	     else
 	     do (setf (gethash oxidized-cpd oxidized-hash)
-		      oxidized-coef))
+		      (* delta-G-frac oxidized-coef)))
 	 (loop for (reduced-coef reduced-cpd) in (second half-rxn)
 	    when (gethash reduced-cpd reduced-hash)
 	    do (setf (gethash reduced-cpd reduced-hash)
 		     (+ (gethash reduced-cpd reduced-hash)
-			reduced-coef))
+			(* delta-G-frac reduced-coef)))
 	    else
 	    do (setf (gethash reduced-cpd reduced-hash)
-		     reduced-coef)))
+		     (* delta-G-frac reduced-coef))))
 
     (list (loop for cpd being the hash-keys of oxidized-hash
 	     using (hash-value coef)
@@ -568,7 +684,6 @@
 	  (loop for cpd being the hash-keys of reduced-hash
 	     using (hash-value coef)
 	     collect (list coef cpd)))))
-
 
 
 
@@ -583,3 +698,102 @@
 						 fs)
 			    (reverse-half-reaction electron-donors-half-reaction))))
 
+
+(defun compute-guild-energy-in (guild-list trophism-data defined-half-reactions)
+  (let ((guild-name (first guild-list))
+	(epsilon 0.6)
+	electron-acceptor-half-rxns
+	electron-donor-half-rxns
+	donor-half-rxn
+	acceptor-half-rxn
+	donor-delta-G
+	acceptor-delta-G
+	delta-Gr
+	energy-rxn
+	least-common-denominator
+	)
+
+    ;; First, looking for donor half reactions:
+    (loop for pwy in (second guild-list)
+       for (tclass nil nil nil) = (find-trophism-data-by-pathway pwy
+								 trophism-data
+								 :acceptor? nil)
+       for half-rxn = nil
+	 
+       when (member tclass '(CARBON_NITROGEN_SOURCE_ELECTRON_DONOR
+			     CARBON_SOURCE_ELECTRON_DONOR
+			     ELECTRON_DONOR))
+       do (setf half-rxn (generate-half-reaction-by-pathway pwy
+							    defined-half-reactions
+							    trophism-data
+							    :acceptor? nil))
+
+       when half-rxn
+       do (push half-rxn
+		electron-donor-half-rxns))
+
+    ;; Next, look for acceptor half-reactions:
+    (loop for pwy in (second guild-list)
+       for (tclass nil nil nil) = (find-trophism-data-by-pathway pwy
+								 trophism-data
+								 :acceptor? t)
+       for half-rxn = nil
+
+       when (member tclass '(ELECTRON_ACCEPTOR))
+       do (setf half-rxn (generate-half-reaction-by-pathway pwy
+							    defined-half-reactions
+							    trophism-data
+							    :acceptor? t))
+       when half-rxn
+       do(push half-rxn
+	       electron-acceptor-half-rxns))
+
+    (setf donor-half-rxn 
+	  (sum-half-reactions electron-donor-half-rxns :weighted? t :donors? t))
+
+    (setf acceptor-half-rxn 
+	  (sum-half-reactions electron-acceptor-half-rxns :weighted? t :donors? nil))
+    
+    (setf donor-delta-G (compute-delta-g-of-half-reaction donor-half-rxn))
+    (setf acceptor-delta-G (compute-delta-g-of-half-reaction acceptor-half-rxn))
+
+    (setf delta-Gr (- acceptor-delta-G donor-delta-G))
+
+    (setf energy-rxn (sum-half-reactions (list acceptor-half-rxn 
+					       (reverse-half-reaction donor-half-rxn))))
+
+    (setf least-common-denominator
+	  (loop for (coef cpd) in (append (first energy-rxn)
+					  (second energy-rxn))
+	     collect (denominator (rational coef)) into denominators
+	     finally
+	       (return (apply #'lcm denominators))))
+
+    (setf delta-Gr-scaled
+	  (compute-delta-g-of-half-reaction
+	   (scale-half-reaction energy-rxn least-common-denominator)))
+
+    (if (and donor-half-rxn acceptor-half-rxn
+	     (not (equalp donor-half-rxn acceptor-half-rxn)))
+	(multiple-value-bind (fs0 fe0 delta-Gs A)
+	    (compute-yield-parameters donor-half-rxn
+				      donor-half-rxn
+				      'ammonium
+				      acceptor-half-rxn
+				      nil)
+	  
+	  (values (* delta-Gr-scaled (/ (+ A (* epsilon A) (* A A epsilon)) (+ 1 A)))
+		  (/ (+ A (* epsilon A) (* A A epsilon)) (+ 1 A))
+		  delta-Gr-scaled
+		  delta-Gr
+		  energy-rxn
+		  least-common-denominator
+		  donor-half-rxn
+		  acceptor-half-rxn
+		  donor-delta-G
+		  acceptor-delta-G
+		  fs0
+		  fe0
+		  delta-Gs
+		  A))
+	'infeasible)))

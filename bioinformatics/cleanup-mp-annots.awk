@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/awk -f
 
 #### cleanup-mp-annots.sh
 ##
@@ -39,16 +39,24 @@
 ## 
 ## #. Re-run TU Predictor after rescoring pathways
 
-gff_file="$1"
-old_annot_file="$2"
-assembly_fasta="$3"
+# gff_file="$1"
+# old_annot_file="$2"
+# assembly_fasta="$3"
 
 
 
 
 ## Break up 0.pf into the component contig annotation files:
 
-awk 'BEGIN { FS=OFS="\t" }
+BEGIN { 
+
+# gff_file="$1"
+# old_annot_file="$2"
+# assembly_fasta="$3"
+
+# $gff_file $old_annot_file
+
+FS=OFS="\t" }
 
 ## Process GFF file to get correct gene coordinates:
 NR == FNR {
@@ -61,6 +69,20 @@ NR == FNR {
       id2startbase[id] = $5
       id2endbase[id]   = $4
    }
+   next
+}
+
+## Break up multi-FASTA file into components:
+
+(FILENAME ~ /fasta$/ || FILENAME ~ /fna$/) && ((NR % 2) == 1) { 
+    split($0,defline_parts,">")
+    defline = defline_parts[2] 
+    next
+}
+(FILENAME ~ /fasta$/ || FILENAME ~ /fna$/) && ((NR % 2) == 0) {
+   print ">" defline > ( defline ".fna" )
+   print $0 > ( defline ".fna" )
+   close( defline ".fna" )
    next
 }
 
@@ -89,42 +111,58 @@ $0 == "//" {
   ## Print record to correct file  
 
   if ( "ID" in curr_record )
-     print "ID", curr_record["ID"] >> (scaffold_name ".pf")
+      print "ID", curr_record["ID"] >> (scaffold_name ".pf")
   if ( "NAME" in curr_record )
-     print "NAME", curr_record["NAME"] >> (scaffold_name ".pf")
+      print "NAME", curr_record["NAME"] >> (scaffold_name ".pf")
   if ( curr_record["ID"] in id2startbase )
-     print "STARTBASE", id2startbase[curr_record["ID"]] >> (scaffold_name ".pf")
+      print "STARTBASE", id2startbase[curr_record["ID"]] >> (scaffold_name ".pf")
   if ( curr_record["ID"] in id2endbase )
-     print "ENDBASE", id2endbase[curr_record["ID"]] >> (scaffold_name ".pf")
+      print "ENDBASE", id2endbase[curr_record["ID"]] >> (scaffold_name ".pf")
   # if ( 
   #    print "FUNCTION", curr_record["PRODUCT"] >> (scaffold_name ".pf")
   if ( "FUNCTION" in curr_record || "PRODUCT" in curr_record ) {
-     if ( "PRODUCT" in curr_record ) {
-        print FILENAME, "line " NR ": ", "Warning: use of \"PRODUCT\" attribute is deprecated." > "/dev/stderr"
-        curr_record["FUNCTION"] = curr_record["PRODUCT"]
-     }
-     ## Get rid of trailing square brackets:
-     gsub(/ \[.*$/, "", curr_record["FUNCTION"])
-     if ( curr_record["FUNCTION"] ~ /nonfunctional/ ) {
-        print "FUNCTION", "ORF" >> (scaffold_name ".pf")
-        print "FUNCTION-COMMENT", curr_record["FUNCTION"] >> (scaffold_name ".pf")
-     }
-     else if ( curr_record["FUNCTION"] ~  /\#/ ) {
-
-        if ( curr_record["FUNCTION"] ~  /NULL/ || curr_record["FUNCTION"] ~  /COG/ ) {
-           split(curr_record["FUNCTION"], func_parts, " ")
-           if ( func_parts[1] != "NULL" )
+      if ( "PRODUCT" in curr_record ) {
+	  print FILENAME, "line " NR ": ", "Warning: use of \"PRODUCT\" attribute is deprecated." > "/dev/stderr"
+	  curr_record["FUNCTION"] = curr_record["PRODUCT"]
+      }
+      ## Get rid of trailing square brackets:
+      gsub(/ \[.*$/, "", curr_record["FUNCTION"])
+      if ( curr_record["FUNCTION"] ~ /nonfunctional/ ) {
+	  print "FUNCTION", "ORF" >> (scaffold_name ".pf")
+	  print "FUNCTION-COMMENT", curr_record["FUNCTION"] >> (scaffold_name ".pf")
+      }
+      else if ( curr_record["FUNCTION"] ~ /\#/ )  ) {
+      
+      if ( curr_record["FUNCTION"] ~  /NULL/ || curr_record["FUNCTION"] ~  /COG/ ) {
+	  split(curr_record["FUNCTION"], func_parts, " ")
+	  if ( func_parts[1] != "NULL" )
               print "DBLINK", "COG_2003:" func_parts[1] >> (scaffold_name ".pf")
-           split(curr_record["FUNCTION"], func_parts, ": ")
-        
-           gsub(" Organism","",func_parts[2])
-           print "FUNCTION", func_parts[2] >> (scaffold_name ".pf")
-           print "FUNCTION-COMMENT", curr_record["FUNCTION"] >> (scaffold_name ".pf")
-        }
-        else if ( curr_record["FUNCTION"] ~  /UNIPROT/ ) {
+	  split(curr_record["FUNCTION"], func_parts, ": ")
+	  
+	  gsub(" Organism","",func_parts[2])
+	  print "FUNCTION", func_parts[2] >> (scaffold_name ".pf")
+	  print "FUNCTION-COMMENT", curr_record["FUNCTION"] >> (scaffold_name ".pf")
+      }
+      else if ( curr_record["FUNCTION"] ~ /UNIPROT/ ) {
+	  ## Split the annotation into tokens:
+	  num_tokens = split(curr_record["FUNCTION"],annot_parts," ")
+	  
+	  ## Fast-forward to the OS part, collecting the function annotation:
+	  annot = ""
+	  while(annot_parts[++i] != "OS")
+	      annot = annot " " annot_parts[i]
+	      
+	  print "FUNCTION", annot >> (scaffold_name ".pf")
+
+	  ## Fast-forward to the UniProt part
+	  while(annot_parts[++i] != "UNIPROT")
+	      
+	      Now, based on the below patterns, augment the function with DBLINKS, METACYC entries, and EC numbers.
 
 ## NF == 3,4,5,6,8
 ## NF == 3:  UNIPROT Q44576 RXN-11791
+		    if
+
 ## NF == 4:  UNIPROT A5F8P7 ARGININE-DEIMINASE-RXN 3.5.3.6
 ## NF == 5:  UNIPROT O74351 RXN0-308 SPOM-XXX-01:SPOM-XXX-01-004059-MONOMER 2.8.1.7
 ## NF == 6:  UNIPROT Q9HDU3 UDPGLUCEPIM-RXN SPOM-XXX-01:SPOM-XXX-01-004919-MONOMER 5.1.3.3 5.1.3.2
@@ -177,18 +215,10 @@ END {
         print "//" > "genetic-elements.dat"
    }
 
-}' $gff_file $orf_rxn_file $old_annot_file
+}
 
 
 
 
 
-## Break up multi-FASTA file into components:
-
-awk -F">" '(NR % 2) == 1 { defline = $2 }
-(NR % 2) == 0 {
-   print ">" defline > ( defline ".fna" )
-   print $0 > ( defline ".fna" )
-   close( defline ".fna" )
-}' $assembly_fasta
    
