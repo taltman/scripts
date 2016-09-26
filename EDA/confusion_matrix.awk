@@ -45,7 +45,7 @@ BEGIN {
 
     class_sep = (class_sep_opt) ? class_sep_opt : ":"
 
-    ## Do we assume that both files contain all IDs with labels?
+    ## Do we assume that both files contain all IDs with label
     ## Sparse mode assumes that we just have the positive labels.
     if ( sparse_mode == "" )
 	sparse_mode = "no"
@@ -62,10 +62,11 @@ BEGIN {
 
 $1 ~ (class_sep "F") { false_negatives++ }
 $1 ~ (class_sep "T") { false_positives++ }
-sparse_mode == "yes" && $2 ~ (class_sep "T") { false_negatives++ }
-sparse_mode == "yes" && $2 ~ (class_sep "F") { true_negatives++ }
 $3 ~ (class_sep "F") { true_negatives++ }
 $3 ~ (class_sep "T") { true_positives++ }
+sparse_mode == "yes" && $1 { false_positives++ }
+sparse_mode == "yes" && $2 { false_negatives++ }
+sparse_mode == "yes" && $3 { true_positives++ }
 
 END {
 
