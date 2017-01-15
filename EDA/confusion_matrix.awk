@@ -2,8 +2,9 @@
 
 ### confusion_matrix.awk
 ##
-## Use the output of unix util comm.awk to construct a confusion matrix, along with associated measurements
-## (accuracy, FPR, etc.)
+## Use the output of unix util comm.awk to construct a confusion
+## matrix, along with associated measurements
+## (accuracy, FPR, etc.).
 ##
 ## The heavy lifting is done by comm.awk. Here we parse the stderr
 ## output of comm.awk, cast the values in the terminology of
@@ -13,7 +14,7 @@
 ## time comm.awk predicted.txt gold_standard.txt 2> /dev/null | confusion_matrix.awk
 ##
 ## Here we assume that both the predicted.txt and gold_standard.txt
-## are tab-delimited files with two columns each. The first column
+## are character-delimited files with two columns each. The first column
 ## is an object identifier, and the second column is a class.
 ##
 ## In the current iteration of this script, We only support a
@@ -29,6 +30,10 @@
 ## * class_sep_opt (optional)
 ##   Character that separates identifier from classification.
 ##   Defaults to ":".
+## * verbosity (optional)
+##   Controls what to print. Options are: "basic", "table", "metrics",
+##   and "all".
+
 
 ## TODO:
 ##
@@ -40,12 +45,28 @@ BEGIN {
 
     class_sep = (class_sep_opt) ? class_sep_opt : ":"
 
+    ## Do we assume that both files contain all IDs with label
+    ## Sparse mode assumes that we just have the positive labels.
+    if ( sparse_mode == "" )
+	sparse_mode = "no"
+
+    if ( verbosity == "" )
+	verbosity == "all"
+    
+    false_negatives = 0
+    true_negatives  = 0
+    true_positives  = 0
+    false_positives = 0
+    
 }
 
 $1 ~ (class_sep "F") { false_negatives++ }
 $1 ~ (class_sep "T") { false_positives++ }
 $3 ~ (class_sep "F") { true_negatives++ }
 $3 ~ (class_sep "T") { true_positives++ }
+sparse_mode == "yes" && $1 { false_positives++ }
+sparse_mode == "yes" && $2 { false_negatives++ }
+sparse_mode == "yes" && $3 { true_positives++ }
 
 END {
 
@@ -57,35 +78,51 @@ END {
     num_negative = true_negatives + false_negatives
     total = num_true + num_false
 
-    print "* Basic Statistics:"
-    print ""
-    print "Total objects:", total
-    print "True positives:", true_positives
-    print "True negatives:", true_negatives
-    print "False positives:", false_positives
-    print "False negatives:", false_negatives
-    print ""
+    if ( verbosity == "all" || verbosity == "basic" ) {
+	print "* Basic Statistics:"
+	print ""
+	print "Total objects:","", total
+	print "True positives:","", true_positives
+	print "True negatives:","", true_negatives
+	print "False positives:", false_positives
+	print "False negatives:", false_negatives
+	print ""
+    }
 
-    print "* Table view:"
+    if ( verbosity == "all" || verbosity == "table" ) {
+	print "* Table view:"
+	
+	printf "\t\tPredicted\n"
+	printf "\t\tPositive\tNegative\tTotal\n"
+	printf "Truth\tTrue\t%d\t\t%d\t\t%d\n", true_positives, false_negatives, num_true
+	printf "\tFalse\t%d\t\t%d\t\t%d\n", false_positives, true_negatives, num_false
+	printf "\tTotal\t%d\t\t%d\t\t%d\n", num_positive, num_negative, total
+    }
 
-    printf "\t\tPredicted\n"
-    printf "\t\tPositive\tNegative\tTotal\n"
-    printf "Truth\tTrue\t%d\t%d\t%d\n", true_positives, false_negatives, num_true
-    printf "\tFalse\t%d\t%d\t%d\n", false_positives, true_negatives, num_false
-    printf "\tTotal\t%d\t%d\t%d\n", num_positive, num_negative, total
-    
-    print ""
-    print "* Prediction Metrics:"
-    print ""
-    print "Accuracy:", num_correct"/"total, num_correct*100/total"%"
-    print "Error Rate:", num_incorrect "/" total, num_incorrect*100/total"%"
-    print "Sensitivity (Recall):", true_positives "/" num_true, true_positives*100/num_true"%"
-    print "Specificity (TNR):", true_negatives "/" num_negative, true_negatives*100/num_negative"%"
-    print "Precision:", true_positives "/" num_positive , true_positives*100 / num_positive"%"
-    print "False Positive Rate:", false_positives "/" num_false, false_positives*100/num_false"%"
-    print "False Negative Rate:", false_negatives "/" num_true, false_negatives*100/num_true"%"
+    if ( verbosity == "all" || verbosity == "metrics" ) {
+	print ""
+	print "* Prediction Metrics:"
+	print ""
+	print "Accuracy:","", num_correct"/"total,"", num_correct*100/total"%"
+	print "Error Rate:","", num_incorrect "/" total,"", num_incorrect*100/total"%"
+	print "Sensitivity (Recall):", true_positives "/" num_true,"", true_positives*100/num_true"%"
+	if ( num_negative > 0 )
+	    print "Specificity (TNR):", true_negatives "/" num_negative,"", true_negatives*100/num_negative"%"
 
-    ## Need to add precision, recall, F-measure, sensitivity, and specificity
+	if ( num_false > 0 )
+	    print "False Positive Rate:", false_positives "/" num_false,"", false_positives*100/num_false"%"
+	
+	
+	if ( num_positive > 0 )
+	    print "Precision:","", true_positives "/" num_positive ,"", true_positives*100 / num_positive"%"   
+
+	if ( num_true > 0 )
+	    print "False Negative Rate:", false_negatives "/" num_true,"", false_negatives*100/num_true"%"
+
+
+    }
+ 
+    ## Need to add precision, recall, F-measure, sensitivity, and specificity, and Matthews Correlation Coefficient
 }
 
 # Set 1
