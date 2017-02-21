@@ -5,8 +5,9 @@
 
 ## This is the path to the Git repo, or the unpacked Kraken tarball:
 repo-prefix            := $(HOME)/repos
+jellyfish-install-dir  := $(repo-prefix)
 jellyfish-tarball-name := jellyfish-1.1.11
-jellyfish-home         := $(repo-prefix)/kraken/third-party/$(jellyfish-tarball-name)
+jellyfish-home         := $(jellyfish-install-dir)/jellyfish
 jellyfish-url          := http://www.cbcb.umd.edu/software/jellyfish/$(jellyfish-tarball-name).tar.gz
 ## A directory in the user's PATH where a symlink to kraken can be placed:
 user-bin-dir           := $(HOME)/local/bin
@@ -20,14 +21,14 @@ $(repo-prefix)/kraken:
 install-kraken: $(repo-prefix)/kraken
 
 $(jellyfish-home):
-	mkdir -p $(repo-prefix)/kraken/third-party
-	cd $(repo-prefix)/kraken/third-party \
-		&& wget jellyfish-tarball-url \
+	cd $(jellyfish-install-dir) \
+		&& wget $(jellyfish-url) \
 		&& tar xzf $(jellyfish-tarball-name).tar.gz \
+		&& ln -s $(jellyfish-tarball-name) jellyfish \
+		&& cd $(jellyfish-tarball-name) \
 		&& ./configure --prefix=$(jellyfish-home) \
 		&& make \
-		&& make install \
-		&& ln -s $(jellyfish-home)/bin/jellyfish $(user-bin-dir)/jellyfish
+		&& make install
 
 install-jellyfish: $(jellyfish-home)
 
