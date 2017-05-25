@@ -27,14 +27,14 @@ mkdir new-tar-ball-dir
 
 pushd new-tar-ball-dir
 
-for tardir in `tar tf tarball.tar | head | egrep "\/$"`
+for tardir in `tar tf ../tarball.tar | head | egrep "\/$"`
 do
 
     new_tar_ball_name="`basename $tardir`"
     echo "Extracting $tardir"
     tar xf ../tarball.tar $tardir 
 
-    echo "Re-archiving $tardir:"
+    echo "Re-archiving $tardir as $new_tar_ball_name.tgz:"
     tar czf \
 	$new_tar_ball_name.tgz \
 	$tardir
