@@ -15,8 +15,8 @@ function revComp (seq,
     comp["C"] = "G"
 
     split(seq,seq_bases,"")
-    for(i==length(seq); i>=1; i--)
-	rev_comp_seq = rev_comp_seq revComp(seq_bases[i])
+    for(i=length(seq); i>=1; i--)
+	rev_comp_seq = rev_comp_seq comp[seq_bases[i]]
 
     return rev_comp_seq
 
@@ -57,7 +57,7 @@ END {
 	else
 	    feature_subseq = revComp(temp_subseq)
 
-	print ">" feature "|" feature_seq " " feature_start[feature] "|" feature_end[feature] "|" feature_score[feature] "|" feature_strand[feature] "|" feature-desc[feature]
+	print ">" feature "|" feature_seq[feature] " " feature_start[feature] "|" feature_end[feature] "|" feature_score[feature] "|" feature_strand[feature] "|" feature_desc[feature]
 	print feature_subseq
 
     }
