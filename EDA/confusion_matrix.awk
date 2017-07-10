@@ -110,8 +110,7 @@ END {
 
 	if ( num_false > 0 )
 	    print "False Positive Rate:", false_positives "/" num_false,"", false_positives*100/num_false"%"
-	
-	
+		
 	if ( num_positive > 0 )
 	    print "Precision:","", true_positives "/" num_positive ,"", true_positives*100 / num_positive"%"   
 
