@@ -43,8 +43,7 @@
 ## a future version should make this optional via a switch.
 ## * also, I don't think we are matching comm's behavior perfectly
 ## here, in that I believe comm will return repeated entries.
-## Not just that, but it is buggy in my estimation! Or, the
-## documentation doesn't match the behavior. If you have files:
+## If you have files:
 #
 # test1.txt:
 #
@@ -69,7 +68,7 @@
 # 	C
 #
 # 	As you can see, line values which are not unique still find their way into columns 1 and 2!
-## I should take this up with the GNU project. :-)
+## This is because GNU coreutils comm is doing a bag intersection when the inputs are not strictly sets.
 
 
 BEGIN { FS=OFS="\t" }
