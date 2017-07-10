@@ -6,7 +6,7 @@
 ## matrix, along with associated measurements
 ## (accuracy, FPR, etc.).
 ##
-## The heavy lifting is done by comm.awk. Here we parse the stderr
+## The heavy lifting is done by comm.awk. Here we parse the
 ## output of comm.awk, cast the values in the terminology of
 ## classifier evaluation, and produce output for the user:
 ##
@@ -51,7 +51,7 @@ BEGIN {
 	sparse_mode = "no"
 
     if ( verbosity == "" )
-	verbosity == "all"
+	verbosity = "all"
     
     false_negatives = 0
     true_negatives  = 0
@@ -118,7 +118,7 @@ END {
 	if ( num_true > 0 )
 	    print "False Negative Rate:", false_negatives "/" num_true,"", false_negatives*100/num_true"%"
 
-
+	print "F1 score:","", 2*true_positives/(2*true_positives+false_negatives + false_positives)
     }
     
     ## Need to add F-measure and Matthews Correlation Coefficient
