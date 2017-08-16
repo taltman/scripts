@@ -96,13 +96,23 @@ divided by alphabet/numeric transition, or vice versa."
 
 (defun load-chemical-data (path)
   (loop for (name frame-id formula-string gibbs) in (load-char-delimited-file #\Tab path)
-     for gibbs-float = (if (not (string= gibbs "")) (read-from-string gibbs))
+     for gibbs-float = (when (not (string= gibbs "")) (rationalize (read-from-string gibbs)))
      do (setf (gethash (intern (remove #\" frame-id))
 		       *metacyc-chem-data*)
 	      (list (remove #\" name)
 		    (make-chemical-formula-from-string
 		     (remove #\" formula-string ))
-		    gibbs-float))))
+		    gibbs-float)))
+   (setf (gethash 'generic-biomass-empirical-formula
+		 *metacyc-chem-data*)
+	(list "Generic Biomass Empirical Formula" 
+	      (list (list 'C 5)
+		    (list 'H 7)
+		    (list 'O 2)
+		    (list 'N 1))
+	      nil)))
+
+
 
 ;; Keeping temporarily while refactoring:
   ;; (with-open-file (chem-file path)
@@ -286,6 +296,7 @@ divided by alphabet/numeric transition, or vice versa."
 
 ;;;; :::::::::::::::::::::::::: Defined Data :::::::::::::::::::::::::::::::::::::::::::
 
+;;(defvar *atomic-masses*)
 
 ;;; List of mixed fermentation pathways with non-1:1 product ratios:
 
@@ -462,6 +473,7 @@ divided by alphabet/numeric transition, or vice versa."
 
 
 
+
 ;;;; :::::::::::::::::::::::::::: Half Reactions  :::::::::::::::::::::::::::::::::::::::
 
 
@@ -470,7 +482,7 @@ divided by alphabet/numeric transition, or vice versa."
 
 (defun custom-chon-organic-half-reaction (cpd)
 
-  (when (= (get-compound-charge cpd) 0)
+  (when (not (= (get-compound-charge cpd) 0))
     (error "Function wasn't designed to handle charged organic molecules"))
 
   (when (null (get-chemical-formula cpd))
@@ -560,6 +572,19 @@ divided by alphabet/numeric transition, or vice versa."
       (custom-chon-organic-half-reaction cpd)
       (custom-charged-chon-organic-half-reaction cpd)))
 
+
+;; Only implementing ammonium half-reaction for now:
+
+(defun generate-cell-synthesis-half-reaction (nitrogen-source)
+  (cond ((eq nitrogen-source 'ammonium)
+	 (list (list (list 1/5  'CARBON-DIOXIDE)
+		     (list 1/20 'HCO3          )
+		     (list 1/20 'AMMONIUM      )
+		     (list 1    'PROTON        )
+		     (list 1    'e-            ))
+	       (list (list 1/20 'generic-biomass-empirical-formula)
+		     (list 9/20 'WATER))))))
+	       
 
 
 ;; Currently only works for chon substrates
@@ -720,7 +745,7 @@ divided by alphabet/numeric transition, or vice versa."
 ;; This currently doesn't work for non-chon substrates
 ;; This needs to be more flexible to pick electron acceptor half reactions, too.
 ;; Todo: make transfer efficiency a parameter
-;; This function should take half-reactions as arguments, so we're not searching for half-reactions twice. 
+
 
 (defun compute-yield-parameters (electron-donor-half-rxn
 				 carbon-source-half-rxn
@@ -739,7 +764,7 @@ divided by alphabet/numeric transition, or vice versa."
 	  (compute-delta-g-of-half-reaction 
 	   (generate-simple-chon-half-reaction 'oxygen-molecule)))
 
-	 ;; This is currently assuming ammonium as carbon source:
+	 ;; This is currently assuming ammonium as nitrogen source:
 	 (delta-Gp (if autotroph?
 		       (- delta-Gr-pyruvate
 			  delta-Gr-autotrophs)
@@ -758,10 +783,10 @@ divided by alphabet/numeric transition, or vice versa."
 		 26)
 		((equal nitrogen-source 'nitrogen-molecule)
 		 23)))
-	 (delta-Gpc (* 0.80 (/ 113 electron-equivalents-biomass)))
+	 (delta-Gpc (* 8/10 (/ 113 electron-equivalents-biomass)))
 
 	 ;; Estimate from McCarty as safe assumption (actually range of values from 55 to 70 %):
-	 (transfer-efficiency 0.65)
+	 (transfer-efficiency 65/100)
 	 (delta-Gs (if (< delta-Gp 0)
 		       (+ (/ delta-Gp
 			     (expt transfer-efficiency -1))
@@ -789,7 +814,7 @@ divided by alphabet/numeric transition, or vice versa."
 	    delta-Gr-carbon-source
 	    delta-Gp
 	    delta-Gpc
-	    delta-Gr-electron-donor)))
+	    delta-Gr-electron-donor)))o
 
 (defun reverse-half-reaction (half-reaction)
   (list (second half-reaction)
@@ -819,6 +844,8 @@ divided by alphabet/numeric transition, or vice versa."
 	 (/ 1 delta-G))))
   
 
+;; This currently has a bug in that it doesn't simplify when terms are on both sides of the quation.
+
 (defun sum-half-reactions (half-reactions-list &key weighted? donors?)
 
   ;; oxidized is meant to mean "left side", and 
@@ -842,7 +869,7 @@ divided by alphabet/numeric transition, or vice versa."
 		     (delta-G-weight delta-G :donors? donors?)))))
 			 			 
     (loop for half-rxn in half-reactions-list
-       for delta-G = (compute-delta-g-of-half-reaction half-rxn)
+       for delta-G =  (when weighted? (compute-delta-g-of-half-reaction half-rxn))
        for delta-G-frac = (if weighted?
 			      (/ (delta-G-weight delta-G :donors? donors?)
 				 delta-G-sum)
@@ -872,6 +899,8 @@ divided by alphabet/numeric transition, or vice versa."
 	     collect (list coef cpd)))))
 
 
+;; Creating a cell-synthesis-half-reaction:
+;; list (
 
 (defun construct-microbial-growth-equation (electron-donors-half-reaction
 					    electron-acceptors-half-reaction
@@ -891,7 +920,7 @@ divided by alphabet/numeric transition, or vice versa."
 ;; Won't work correctly until I can reconstruct the guild-list data structure.
 
 (defun compute-guild-energy-in (guild-list)
-  (let ((guild-name (first guild-list))
+  (let (;(guild-name (first guild-list))
 	(epsilon 0.6)
 	electron-acceptor-half-rxns
 	electron-donor-half-rxns
@@ -967,7 +996,7 @@ divided by alphabet/numeric transition, or vice versa."
 				      'ammonium
 				      acceptor-half-rxn
 				      nil)
-	  
+	   
 	  (values (* delta-Gr-scaled (/ (+ A (* epsilon A) (* A A epsilon)) (+ 1 A)))
 		  (/ (+ A (* epsilon A) (* A A epsilon)) (+ 1 A))
 		  delta-Gr-scaled
