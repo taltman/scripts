@@ -10,7 +10,7 @@
 ## PICRUSt can parse.
 ##
 ## Example:
-## ./biocyc2picrust.sh
+## ./biocyc2picrust.sh ~/biocyc/
 ##
 ## Description:
 ##
@@ -33,7 +33,11 @@
 ##
 ## Arguments:
 ##
-## None. The script has a series of parameters that can be changed at the
+## It takes one argument, which is the base directory where all of the
+##   PGDB sub-directores are located. This has been updated to expect
+##   the directory structure of the v20.0 release of BioCyc.
+##
+## The script has a series of parameters that can be changed at the
 ## top of the file.
 ##
 ##
@@ -74,22 +78,24 @@
 ### Parameters:
 
 ## Where to find the BioCyc Collection flat-files:
-biocyc_collection_path=~/farmshare/bio_dbs/biocyc/17.5/
+biocyc_collection_path="$1"
 
 ## Specific path to MetaCyc flat-files:
-metacyc_path="$biocyc_collection_path/metacyc/17.5/"
+metacyc_path="$biocyc_collection_path/metacyc/"
+
+[ "$TMPDIR" = "" ] && export TMPDIR=/tmp
 
 ## PGDB vs. pwy table:
-org_pwy_table="/tmp/biocyc_pwy_table.txt"
+org_pwy_table="$TMPDIR/biocyc_pwy_table.txt"
 
 ## PGDB vs. rxn table:
-org_rxn_table="/tmp/biocyc_rxn_table.txt"
+org_rxn_table="$TMPDIR/biocyc_rxn_table.txt"
 
 ## PGDB vs. cpd table:
-org_cpd_table="/tmp/biocyc_cpd_table.txt"
+org_cpd_table="$TMPDIR/biocyc_cpd_table.txt"
 
 ## PGDB metadata table:
-org_metadata_table="/tmp/pgdb_metadata.txt"
+org_metadata_table="$TMPDIR/pgdb_metadata.txt"
 
 
 
@@ -146,21 +152,25 @@ VCHO	243277
 YEAST	4932
 EOF
 
-	## Create an GAWK script for scraping out the desired metadata:
+	## Create a Gawk script for scraping out the desired metadata:
 
-	cat <<EOF > /tmp/biocyc2picrust_org_metadata.awk
+	
+	## Execute the GAWK script:
+	gawk -f <( cat <<'EOF'
         BEGIN { FS=OFS="\t"; RS="\r?\n" }
-        NR == FNR { org_taxon[\$1]=\$2; next }
-        /^ID/ { id=\$2 }
-        /^NAME/ { name=\$2 }
-        /^SUBSPECIES/ { subspecies=\$2 }
-        /^STRAIN/ { strain=\$2 }
+        NR == FNR { org_taxon[$1]=$2; next }
+        /^ID/ { id=$2 }
+        /^NAME/ { name=$2 }
+        /^SUBSPECIES/ { subspecies=$2 }
+        /^STRAIN/ { strain=$2 }
         END { if ( taxon == "" && id in org_taxon) taxon = org_taxon[id]
               print taxon, tolower(id), name, subspecies, strain }
 EOF
-	
-	## Execute the GAWK script:
-	gawk -f /tmp/biocyc2picrust_org_metadata.awk -v taxon="$taxon" /tmp/biocyc2picrust_taxon_mapping.txt input/organism.dat >> $org_metadata_table
+		 ) \
+	     /tmp/biocyc2picrust_org_metadata.awk \
+	     -v taxon="$taxon" \
+	     /tmp/biocyc2picrust_taxon_mapping.txt input/organism.dat \
+	     >> $org_metadata_table
 
 	popd > /dev/null
 	
@@ -170,7 +180,8 @@ EOF
 
 
 ## Create organism metadata file in the background:
-create_org_table &
+## This is now obsolete, due to the BioCyc-Manifest.data file.
+##create_org_table &
 
 
 ## Define the GAWK code for creating the organism vs. {pwy|rxn|cpd} tables:
@@ -223,15 +234,37 @@ END {
 }
 EOF
 
+rm -f valid_pgdbs.txt
+## Unfortunately, the following code is necessary to ferret out
+## incomplete PGDBs:
+for pgdb in `ls`
+do
+    [ -e $pgdb/pathways.dat ] \
+	&& [ -e $pgdb/reactions.dat ] \
+	&& [ -e $pgdb/compounds.dat ] \
+	&& echo $pgdb \
+		>> valid_pgdbs.txt
+    
+done
+
 
 ## Generate pathway table:
-gawk -f /tmp/biocyc2picrust_instances.awk -v metacyc_instance_file=$metacyc_path/data/pathways.dat `ls *cyc/*/data/pathways.dat| grep -v metacyc` > $org_pwy_table &
+gawk -f /tmp/biocyc2picrust_instances.awk \
+     -v metacyc_instance_file=$metacyc_path/data/pathways.dat \
+     `awk '{ print $0 "/pathways.dat" }' valid_pgdbs.txt` \
+     > $org_pwy_table &
 
 ## Generate reaction table:
-gawk -f /tmp/biocyc2picrust_instances.awk -v metacyc_instance_file=$metacyc_path/data/reactions.dat `ls *cyc/*/data/reactions.dat| grep -v metacyc` > $org_rxn_table &
+gawk -f /tmp/biocyc2picrust_instances.awk \
+     -v metacyc_instance_file=$metacyc_path/data/reactions.dat \
+     `awk '{ print $0 "/reactions.dat" }' valid_pgdbs.txt` \
+     > $org_rxn_table &
 
 ## Generate compound table:
-gawk -f /tmp/biocyc2picrust_instances.awk -v metacyc_instance_file=$metacyc_path/data/compounds.dat `ls *cyc/*/data/compounds.dat| grep -v metacyc` > $org_cpd_table &
+gawk -f /tmp/biocyc2picrust_instances.awk \
+     -v metacyc_instance_file=$metacyc_path/data/compounds.dat \
+     `awk '{ print $0 "/compounds.dat" }' valid_pgdbs.txt` \
+     > $org_cpd_table &
 
 
 ## This forces the parent script to block until all four background
