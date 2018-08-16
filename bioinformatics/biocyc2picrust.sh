@@ -117,17 +117,25 @@ create_org_table () {
 	
     for pgdb in `ls | grep cyc | egrep -v "biocyc-allcyc|metacyc"`
     do
+	pushd $pgdb
 	
-	[ ! -e $pgdb/default-version ] && echo "$pgdb: no default-version"
-	pgdb_version=`cat $pgdb/default-version`
-	
-	pushd ${pgdb}/$pgdb_version > /dev/null
+	if [ -e default-version ]
+	then
+	    pgdb_version=`cat default-version`	
+	    pushd $pgdb_version > /dev/null
+	    ## If the organism-init.dat file is present, attempt to parse the NCBI Taxon ID out of it:
+	    [ -e input/organism-init.dat ] && taxon=`gawk -F"\t" 'BEGIN{ RS="\r?\n"} /^NCBI-TAXON-ID/ { printf $2 }' input/organism-init.dat`
+	    sep="\t"
+	    input_file="input/organism.dat"
+	elif [ -e species.dat ]	     
+	then
+	     taxon=`gawk -F" - " -v org_id="$pgdb" '$2 == toupper(org_id) { getline; split($2,tax_parts,"-"); print tax_parts[2]} species.dat`
+	     sep=" - "
+	     input_file="version.dat"
+	fi
 	
 	## Gerate metadata table for PGDBs
 	
-	## If the organism-init.dat file is present, attempt to parse the NCBI Taxon ID out of it:
-
-	[ -e input/organism-init.dat ] && taxon=`gawk -F"\t" 'BEGIN{ RS="\r?\n"} /^NCBI-TAXON-ID/ { printf $2 }' input/organism-init.dat`
 
 
 	## Define a mapping file for PGDBs without NCBI Taxonomy IDs in
@@ -167,7 +175,6 @@ EOF
               print taxon, tolower(id), name, subspecies, strain }
 EOF
 		 ) \
-	     /tmp/biocyc2picrust_org_metadata.awk \
 	     -v taxon="$taxon" \
 	     /tmp/biocyc2picrust_taxon_mapping.txt input/organism.dat \
 	     >> $org_metadata_table
@@ -181,7 +188,7 @@ EOF
 
 ## Create organism metadata file in the background:
 ## This is now obsolete, due to the BioCyc-Manifest.data file.
-##create_org_table &
+#create_org_table &
 
 
 ## Define the GAWK code for creating the organism vs. {pwy|rxn|cpd} tables:
@@ -247,22 +254,26 @@ do
     
 done
 
+if [ -e $metacyc_path/data/pathways.dat ]
+then
+    metacyc_path="$metacyc_path/data"
+fi
 
 ## Generate pathway table:
 gawk -f /tmp/biocyc2picrust_instances.awk \
-     -v metacyc_instance_file=$metacyc_path/data/pathways.dat \
+     -v metacyc_instance_file=$metacyc_path/pathways.dat \
      `awk '{ print $0 "/pathways.dat" }' valid_pgdbs.txt` \
      > $org_pwy_table &
 
 ## Generate reaction table:
 gawk -f /tmp/biocyc2picrust_instances.awk \
-     -v metacyc_instance_file=$metacyc_path/data/reactions.dat \
+     -v metacyc_instance_file=$metacyc_path/reactions.dat \
      `awk '{ print $0 "/reactions.dat" }' valid_pgdbs.txt` \
      > $org_rxn_table &
 
 ## Generate compound table:
 gawk -f /tmp/biocyc2picrust_instances.awk \
-     -v metacyc_instance_file=$metacyc_path/data/compounds.dat \
+     -v metacyc_instance_file=$metacyc_path/compounds.dat \
      `awk '{ print $0 "/compounds.dat" }' valid_pgdbs.txt` \
      > $org_cpd_table &
 
