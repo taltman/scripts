@@ -9,18 +9,39 @@
 
 tarball="$1"
 
-tmpdir="`mktemp -d /tmp/split-tar-by-dir.XXX`"
+tmpdir="`mktemp -d split-tar-by-dir.XXX`"
 
-pushd tmpdir > /dev/null
+echo "Temp dir: $tmpdir"
 
-gunzip $tarball > tarball.tar
+curr_dir="$PWD"
+
+pushd $tmpdir > /dev/null
+
+##gunzip $tarball > tarball.tar
+
+ln -s $curr_dir/$tarball tarball.tar
 
 base_name="`basename $tarball .tar.gz`"
 
 mkdir new-tar-ball-dir
 
+pushd new-tar-ball-dir
+
+for tardir in `tar tf ../tarball.tar | head | egrep "\/$"`
+do
+
+    new_tar_ball_name="`basename $tardir`"
+    echo "Extracting $tardir"
+    tar xf ../tarball.tar $tardir 
+
+    echo "Re-archiving $tardir as $new_tar_ball_name.tgz:"
+    tar czf \
+	$new_tar_ball_name.tgz \
+	$tardir
+    
+done
+
+popd
 
 
-
-
-popdir > /dev/null
+popd > /dev/null

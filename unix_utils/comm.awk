@@ -43,8 +43,7 @@
 ## a future version should make this optional via a switch.
 ## * also, I don't think we are matching comm's behavior perfectly
 ## here, in that I believe comm will return repeated entries.
-## Not just that, but it is buggy in my estimation! Or, the
-## documentation doesn't match the behavior. If you have files:
+## If you have files:
 #
 # test1.txt:
 #
@@ -69,7 +68,13 @@
 # 	C
 #
 # 	As you can see, line values which are not unique still find their way into columns 1 and 2!
-## I should take this up with the GNU project. :-)
+##
+## * Note that the behavior of this script in the face of bags instead of
+##   sets, is not modeled after comm's behavior (i.e., bag
+##   intersections). Instead, the set-based intersection is determined,
+##   and any bag members that are in the set intersection go into the bag
+##   intersection. Should make a toggle to change the behavior. And need
+##   clear documentation of both behaviors.
 
 
 BEGIN { FS=OFS="\t" }
