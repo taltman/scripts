@@ -16,4 +16,4 @@ TMPDIR ?= /tmp
 .DELETE_ON_ERROR:
 
 ## This is necessary to make sure that these intermediate files aren't clobbered:
-.SECONDARY: $(chromosomes-vcf-path)
+.SECONDARY: 
