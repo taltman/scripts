@@ -3,7 +3,7 @@
 SHELL := /bin/bash
 .SHELLFLAGS = -ec
 
-## If the parent env doesn't ste TMPDIR, do it ourselves:
+## If the parent env doesn't set TMPDIR, do it ourselves:
 TMPDIR ?= /tmp
 
 
