@@ -6,7 +6,7 @@
 ## https://unix.stackexchange.com/questions/277697/
 ## 
 ## Call with output from 'ls -lTR' as follows:
-## `ls -lTR | time awk -f ~/repos/bin/find-dupes.awk > hash-dupes.txt`
+## `ls -lTR | time awk -f find-dupes.awk > hash-dupes.txt`
 ## 
 ## This has been tested on a FreeBSD system. It should work with gawk
 ## without much modification, as it was written to use only POSIX
